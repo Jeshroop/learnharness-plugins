@@ -45,12 +45,28 @@ test("a wrong flag reads as wrong; no flag reads as unmarked", () => {
 	assert.deepEqual(answers.map(a => a.result), ["wrong", "unmarked", "unmarked"]);
 });
 
-test("a request to ask it another way is not an attempt, and neither is a dismissal", () => {
-	const dismissed = result("c2", "fill_in_blank", { kind: "plugin-question-cancelled", occurrence: { toolCallId: "c2" }, reason: "dismissed" }, 4);
-	assert.deepEqual(answeredQuestions(record([
+const dismissal = (callId: string, minute: number) => result(callId, "fill_in_blank", { kind: "plugin-question-cancelled", occurrence: { toolCallId: callId }, reason: "dismissed" }, minute);
+
+test("a request to ask it another way is not an attempt; a dismissal reads as dismissed, like a native one", () => {
+	const answers = answeredQuestions(record([
 		posed("c1", 1, "Q", stem), answer("c1", 2, { reformat: "graph" }, { reformat: "graph" }),
-		posed("c2", 3, "Q", stem), dismissed,
-	]) as never), []);
+		posed("c2", 3, "Q", stem), dismissal("c2", 4),
+	]) as never);
+	assert.deepEqual(answers.map(a => [a.toolCallId, a.dismissed]), [["c2", true]]);
+});
+
+test("a dismissed plugin question closes its declaration, so a later undeclared answer isn't credited to it", () => {
+	const declaration = { v: 1, id: "ev_000000000001", at: iso(1), prev: "0".repeat(64), type: "declare", chatId: "chat_test", ideas: ["n_a"], names: { n_a: "Name A" } } as unknown as LoggedEvent;
+	const events = pendingEvents("chat_test", record([
+		posed("c1", 2, "Q", stem), dismissal("c1", 3),
+		posed("c2", 4, "Q2", { ...stem, text: "[[1]] = mg" }), answer("c2", 5, { blanks: ["W"] }, { correct: true }),
+	]) as never, [declaration]);
+	assert.equal(events.filter(e => e.type === "observed").length, 0);
+});
+
+test("each typed gap is its own quotable text, so separate one-word gaps can't make a three-word quote", () => {
+	const texts = learnerTexts(record([posed("c1", 1, "Q", stem), answer("c1", 2, { blanks: ["force", "equals", "mass"] }, { correct: false })]) as never, 0);
+	assert.deepEqual(texts.filter(t => t.field === "answer").map(t => t.text), ["force", "equals", "mass"]);
 });
 
 test("a different payload makes a different question text, so variants are told apart", () => {

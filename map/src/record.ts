@@ -61,13 +61,14 @@ function canonical(value: unknown): string {
 	if (o) return `{${Object.keys(o).sort().map(key => `${JSON.stringify(key)}:${canonical(o[key])}`).join(",")}}`;
 	return JSON.stringify(value) ?? "null";
 }
-/** Every string a learner typed into a plugin answer, one per line. */
-function typedText(value: unknown): string {
-	if (typeof value === "string") return value;
-	if (Array.isArray(value)) return value.map(typedText).filter(Boolean).join("\n");
+/** Every string a learner typed into a plugin answer, each on its own. */
+function typedPieces(value: unknown): string[] {
+	if (typeof value === "string") return value.trim() ? [value] : [];
+	if (Array.isArray(value)) return value.flatMap(typedPieces);
 	const o = obj(value);
-	return o ? Object.values(o).map(typedText).filter(Boolean).join("\n") : "";
+	return o ? Object.values(o).flatMap(typedPieces) : [];
 }
+const typedText = (value: unknown) => typedPieces(value).join("\n");
 const isReformat = (d: Obj) => obj(d.answer)?.reformat !== undefined || obj(obj(d.grading)?.result)?.reformat !== undefined;
 
 /** Plugin questions posed so far: toolCallId → the prompt and payload the tutor wrote. */
@@ -89,6 +90,15 @@ export function answeredQuestions(record: RecordLike): AnsweredQuestion[] {
 		if (m) notePosed(m, posed);
 		if (!m || m.role !== "toolResult" || m.isError === true) continue;
 		const tool = str(m.toolName), toolCallId = str(m.toolCallId), messageId = str(m.id), d = obj(m.details);
+		if (d?.kind === "plugin-question-cancelled" && toolCallId && messageId) {
+			// Like a native dismissal: not an attempt, but it closes the declaration window.
+			const question = posed.get(toolCallId);
+			if (question) answers.push({
+				toolCallId, messageId, tool: "plugin", answeredAt: stamp(m), dismissed: true,
+				questionText: `${question.question}\n${canonical(question.payload)}`.trim(), picks: [], result: "unmarked", wordsOnly: false,
+			});
+			continue;
+		}
 		if (d?.kind === "plugin-question" && toolCallId && messageId) {
 			const question = posed.get(toolCallId);
 			if (!question || (str(d.questionId) && d.questionId !== question.questionId) || isReformat(d)) continue;
@@ -185,7 +195,8 @@ export function learnerTexts(record: RecordLike, sinceMs: number): LearnerText[]
 			push(m.id, when, "text", d.text);
 			push(m.id, when, "other", d.other);
 			push(m.id, when, "readingThinking", d.readingThinking);
-			if (d.kind === "plugin-question" && !isReformat(d)) push(m.id, when, "answer", typedText(d.answer));
+			// Each typed piece on its own, so a quote can't stitch separate gaps together.
+			if (d.kind === "plugin-question" && !isReformat(d)) for (const piece of typedPieces(d.answer)) push(m.id, when, "answer", piece);
 		}
 	}
 	return texts.sort((a, b) => a.at - b.at);
