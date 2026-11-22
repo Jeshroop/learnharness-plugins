@@ -41,6 +41,13 @@ test("a smooth curve stays one path", () => {
 	assert.equal(samplePaths(fn("e^x"), X).length, 1);
 });
 
+test("axis ticks stay bounded far from zero, where the step is below the numbers' precision", () => {
+	for (const range of [[1e16, 1e16 + 3], [1e300, 1e300 * 1.000001], [0, 1e-300]] as [number, number][]) {
+		const ticks = axisTicks(range);
+		assert.ok(Array.isArray(ticks) && ticks.length <= 50, `${range}: ${ticks.length}`);
+	}
+});
+
 test("axis ticks are evenly spaced and include zero", () => {
 	const ticks = axisTicks([-5, 5]);
 	assert.ok(ticks.includes(0));
