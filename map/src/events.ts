@@ -37,7 +37,7 @@ export interface ObservedEvent {
 	ideas: IdeaKey[];
 	names: Record<IdeaKey, string>;
 	posedAt: string;
-	question: { text: string; format: "quiz" | "explain" | "practice"; options?: string[] };
+	question: { text: string; format: "quiz" | "explain" | "practice" | "plugin"; options?: string[] };
 	answer: {
 		result: Result | "unmarked";
 		hinted: boolean;

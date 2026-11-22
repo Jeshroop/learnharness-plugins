@@ -321,7 +321,7 @@ function sharedTools(s: Services, context: PluginToolContext, recordDescription:
 
 export function teacherTools(s: Services, context: PluginToolContext): AgentTool<any>[] {
 	return [
-		tool(s, "declare_tested", "Declare tested ideas", "Declare the ideas the next quiz or explain question tests, before asking it. Returns a declaration id for record_attempt.",
+		tool(s, "declare_tested", "Declare tested ideas", "Declare the ideas the next question tests (quiz, explain, or a plugin question such as fill_in_blank), before asking it. Returns a declaration id for record_attempt.",
 			{ type: "object", additionalProperties: false, required: ["ideas"], properties: { ideas: strings("Graph ids or exact names of the ideas it tests."), newIdeas: strings("Ideas it tests that are not in the graph yet.") } },
 			(input, toolCallId) => declareTested(s, context, input, toolCallId)),
 		...sharedTools(s, context, "Record the learner's attempt at the declared question after the answer arrives: a verdict per declared idea, whether it is a variant, and exact quotes of their words. Returns each idea's state."),

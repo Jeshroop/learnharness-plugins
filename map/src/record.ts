@@ -7,7 +7,8 @@ export interface RecordLike { messages: readonly unknown[] }
 export interface AnsweredQuestion {
 	toolCallId: string;
 	messageId: string;
-	tool: "quiz" | "explain";
+	/** "plugin": another plugin's question type (e.g. Formats' fill in the blank), graded by its `correct` flag. */
+	tool: "quiz" | "explain" | "plugin";
 	/** ms since epoch */
 	answeredAt: number;
 	dismissed: boolean;
@@ -34,7 +35,7 @@ export interface ProblemRun {
 export interface LearnerText {
 	messageId: string;
 	at: number;
-	field: "message" | "working" | "thinking" | "text" | "other" | "readingThinking";
+	field: "message" | "working" | "thinking" | "text" | "other" | "readingThinking" | "answer";
 	text: string;
 }
 
@@ -53,13 +54,55 @@ const labels = (list: unknown) => (Array.isArray(list) ? list.map(item => str(ob
 const TEACHING = new Set(["quiz", "explain"]);
 export const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
 
-/** Native quiz/explain answers, in record order. */
+/** Stable JSON (sorted keys), so the same payload always reads the same. */
+function canonical(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+	const o = obj(value);
+	if (o) return `{${Object.keys(o).sort().map(key => `${JSON.stringify(key)}:${canonical(o[key])}`).join(",")}}`;
+	return JSON.stringify(value) ?? "null";
+}
+/** Every string a learner typed into a plugin answer, one per line. */
+function typedText(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (Array.isArray(value)) return value.map(typedText).filter(Boolean).join("\n");
+	const o = obj(value);
+	return o ? Object.values(o).map(typedText).filter(Boolean).join("\n") : "";
+}
+const isReformat = (d: Obj) => obj(d.answer)?.reformat !== undefined || obj(obj(d.grading)?.result)?.reformat !== undefined;
+
+/** Plugin questions posed so far: toolCallId → the prompt and payload the tutor wrote. */
+function notePosed(m: Obj, posed: Map<string, { questionId: string; question: string; payload: unknown }>): void {
+	const questions = obj(m.lhQuestions);
+	if (m.role !== "assistant" || !questions) return;
+	for (const value of Object.values(questions)) {
+		const q = obj(value), input = obj(q?.input), callId = str(obj(q?.occurrence)?.toolCallId), questionId = str(q?.questionId);
+		if (q && input && callId && questionId) posed.set(callId, { questionId, question: str(input.question) ?? "", payload: input.payload });
+	}
+}
+
+/** Answered questions in record order: native quiz/explain, and other plugins' question types. */
 export function answeredQuestions(record: RecordLike): AnsweredQuestion[] {
 	const answers: AnsweredQuestion[] = [];
+	const posed = new Map<string, { questionId: string; question: string; payload: unknown }>();
 	for (const raw of record.messages) {
 		const m = obj(raw);
+		if (m) notePosed(m, posed);
 		if (!m || m.role !== "toolResult" || m.isError === true) continue;
 		const tool = str(m.toolName), toolCallId = str(m.toolCallId), messageId = str(m.id), d = obj(m.details);
+		if (d?.kind === "plugin-question" && toolCallId && messageId) {
+			const question = posed.get(toolCallId);
+			if (!question || (str(d.questionId) && d.questionId !== question.questionId) || isReformat(d)) continue;
+			const graded = obj(obj(d.grading)?.result);
+			const text = typedText(d.answer);
+			answers.push({
+				toolCallId, messageId, tool: "plugin", answeredAt: time(d.answeredAt, stamp(m)), dismissed: false,
+				questionText: `${question.question}\n${canonical(question.payload)}`.trim(),
+				picks: [], result: graded?.correct === true ? "correct" : graded?.correct === false ? "wrong" : "unmarked", wordsOnly: false,
+				...(nonEmpty(d.thinking) ? { thinking: nonEmpty(d.thinking) } : {}),
+				...(nonEmpty(text) ? { text } : {}),
+			});
+			continue;
+		}
 		if (!tool || !TEACHING.has(tool) || !toolCallId || !messageId || !d) continue;
 		const wordsOnly = d.wordsOnly === true;
 		const result: AnsweredQuestion["result"] = d.dontKnow === true ? "dontKnow"
@@ -142,6 +185,7 @@ export function learnerTexts(record: RecordLike, sinceMs: number): LearnerText[]
 			push(m.id, when, "text", d.text);
 			push(m.id, when, "other", d.other);
 			push(m.id, when, "readingThinking", d.readingThinking);
+			if (d.kind === "plugin-question" && !isReformat(d)) push(m.id, when, "answer", typedText(d.answer));
 		}
 	}
 	return texts.sort((a, b) => a.at - b.at);
