@@ -44,6 +44,20 @@ test("functions, constants, a 'y =' prefix and typographic symbols", () => {
 	close(at("e^x", 1), Math.E);
 });
 
+test("an ambiguous exponent is refused instead of drawing a different curve", () => {
+	for (const source of ["e^2x", "e^-2x", "2^3x", "e^0.5x", "x^2e^x"]) fails(source, /bracket/i);
+	close(at("e^(2x)", 1), Math.E ** 2);
+	close(at("e^(-2x)", -1), Math.E ** 2);
+	close(at("(e^2)x", 1), Math.E ** 2);
+	close(at("x^2(x+1)", 2), 12);
+	close(at("x^2sin(x)", Math.PI / 2), (Math.PI / 2) ** 2);
+	close(at("x^2 - 3x", 4), 4);
+});
+
+test("cube roots of negative numbers are real", () => {
+	close(at("cbrt(x)", -8), -2);
+});
+
 test("mistakes are refused with a readable reason", () => {
 	fails("sin x", /bracket/i);
 	fails("q + 1", /unknown/i);

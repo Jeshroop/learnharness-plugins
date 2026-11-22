@@ -9,7 +9,7 @@ const FUNCTIONS: Record<string, (v: number) => number> = {
 	sec: v => 1 / Math.cos(v), csc: v => 1 / Math.sin(v), cosec: v => 1 / Math.sin(v), cot: v => 1 / Math.tan(v),
 	asin: Math.asin, acos: Math.acos, atan: Math.atan, arcsin: Math.asin, arccos: Math.acos, arctan: Math.atan,
 	sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
-	exp: Math.exp, ln: Math.log, log: Math.log10, sqrt: Math.sqrt, abs: Math.abs,
+	exp: Math.exp, ln: Math.log, log: Math.log10, sqrt: Math.sqrt, cbrt: Math.cbrt, abs: Math.abs,
 	floor: Math.floor, ceil: Math.ceil, sign: Math.sign,
 };
 const CONSTANTS: Record<string, number> = { pi: Math.PI, "π": Math.PI, e: Math.E };
@@ -97,7 +97,14 @@ function parse(tokens: Token[]): Fn {
 		const base = primary();
 		if (!isSym(peek(), "^")) return base;
 		pos++;
+		const start = pos;
 		const exponent = unary(); // right-associative: 2^3^2 = 2^9, and 2^-1 works
+		// e^2x would silently mean (e^2)·x; refuse a bare-number exponent followed by x, a constant or a number.
+		const bareNumber = tokens.slice(start, pos).every(token => token.kind === "num" || isSym(token, "-", "+"));
+		const next = peek();
+		if (bareNumber && next && (next.kind === "num" || (next.kind === "word" && (next.value === "x" || next.value in CONSTANTS)))) {
+			fail("Put the exponent in brackets: write e^(2x) for e to the power 2x, or (e^2)x for e² times x.");
+		}
 		return x => Math.pow(base(x), exponent(x));
 	}
 	function primary(): Fn {
