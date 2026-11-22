@@ -19,4 +19,4 @@ package in `node_modules/` after `npm ci`.
   from the Drawing Pad plugin in [LearnHarness](https://github.com/amosblomqvist/learnharness) (AGPL-3.0).
 - `sdk/` holds the plugin API types from LearnHarness's authoring kit (AGPL-3.0).
 
-Map bundles no third-party code.
+Map and Formats bundle no third-party code.

@@ -7,6 +7,7 @@ tests.
 | Plugin | What it does | Status |
 | --- | --- | --- |
 | [`sketch/`](sketch/) | A lightweight Excalidraw whiteboard for working problems: send a drawing with your answer, or keep it. | Early |
+| [`formats/`](formats/) | New question formats: fill in the blank and choose the graph, an "Ask as…" switch on each card, and a Format button for the next question. | Early |
 | [`map/`](map/) | A map of the ideas you're learning and the evidence that you've mastered them. | Early |
 
 ## Install a plugin
@@ -15,7 +16,7 @@ You need Node.js (tested with 24) and LearnHarness 0.6.1 or newer.
 
 ```sh
 git clone https://github.com/Jeshroop/learnharness-plugins.git
-cd learnharness-plugins/sketch        # or map
+cd learnharness-plugins/sketch        # or map, formats
 npm ci
 npm run install:local -- "<plugins folder>"
 ```
