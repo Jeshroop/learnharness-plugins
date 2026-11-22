@@ -35,6 +35,16 @@ test("words ignore case, spacing and a trailing full stop, but not spelling", ()
 	assert.equal(matches("", ["x"]), false);
 });
 
+test("equivalent forms a learner would reasonably type are accepted", () => {
+	const same: [string, string][] = [
+		["F=ma", "F = ma"], ["v = u+at", "v = u + at"], ["newton’s second law", "newton's second law"],
+		["3×10^8", "3e8"], ["3 x 10^8", "3e8"], ["3*10^8", "3e8"], ["3e8", "3×10^8"], ["½", "0.5"], ["2.5 × 10^-3", "0.0025"],
+	];
+	for (const [given, accepted] of same) assert.equal(matches(given, [accepted]), true, `${given} ~ ${accepted}`);
+	assert.equal(matches("kineticenergy", ["kinetic energy"]), false, "spacing between words still matters");
+	assert.equal(matches("F=mv", ["F = ma"]), false);
+});
+
 test("grading reports each gap and the whole", () => {
 	const p: BlankPayload = { text: "[[1]] [[2]]", why: "w", blanks: [{ accept: ["mass"] }, { accept: ["9.8"], tolerance: 0.1 }] };
 	assert.deepEqual(gradeBlank(p, { blanks: ["Mass", "9.81"] }), { correct: true, blanks: [{ given: "Mass", correct: true }, { given: "9.81", correct: true }] });

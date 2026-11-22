@@ -15,7 +15,8 @@ const TEACH = [
 	"Best for recalling exact terms, values, formulas, units or steps.",
 	"`question` is a short instruction shown above it (e.g. \"Fill in the gaps.\").",
 	"payload.text is Markdown with each gap written as [[1]], [[2]], … in order — keep gaps outside $…$ maths.",
-	"payload.blanks gives, for each gap in order, the accepted answers (numbers match by value; add tolerance for rounded values) and an optional short hint shown in the gap.",
+	"payload.blanks gives, for each gap in order, the accepted answers and an optional short hint shown in the gap. List every equivalent form you'd accept (other wordings, symbols, units);",
+	"case, spacing around symbols, curly quotes, a×10^n and fractions are matched automatically, and numbers match by value (add tolerance for rounded values).",
 	"payload.why is one line saying why this format suits this question; it is shown on the card.",
 	"Accepted answers stay hidden until the learner answers.",
 ].join(" ");
@@ -93,10 +94,18 @@ export function validateBlankAnswer(payload: BlankPayload, answer: BlankAnswer):
 	return answer.blanks.length === payload.blanks.length ? undefined : [`Expected ${payload.blanks.length} answers, one per gap; got ${answer.blanks.length}.`];
 }
 
-const normalizeText = (value: string) => value.normalize("NFKC").replace(/[−–—]/g, "-").replace(/\s+/g, " ").trim().replace(/[.。]+$/, "").toLowerCase();
+/** Case, spacing, curly quotes, unicode minus and a trailing full stop don't matter; spacing next to
+ *  symbols doesn't either ("F = ma" is "F=ma"), but spacing between words does ("kinetic energy"). */
+const normalizeText = (value: string) => value.normalize("NFKC")
+	.replace(/[‘’‛′]/g, "'").replace(/[“”‟″]/g, "\"").replace(/[−–—]/g, "-").replace(/⁄/g, "/")
+	.replace(/\s+/g, " ").trim().replace(/[.。]+$/, "")
+	.replace(/\s*([^\p{L}\p{N}\s])\s*/gu, "$1")
+	.toLowerCase();
 
 function parseNumber(value: string): number {
 	const compact = normalizeText(value).replace(/\s+/g, "");
+	const scientific = /^([+-]?(?:\d+\.?\d*|\.\d+))[×x*·]10\^([+-]?\d+)$/.exec(compact);
+	if (scientific) return Number(scientific[1]) * 10 ** Number(scientific[2]);
 	const fraction = /^([+-]?\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/.exec(compact);
 	if (fraction) return Number(fraction[1]) / Number(fraction[2]);
 	return /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/.test(compact) ? Number(compact) : Number.NaN;
