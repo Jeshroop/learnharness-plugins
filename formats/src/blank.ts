@@ -60,10 +60,11 @@ export const blankDefinition = {
 	probe: { toolName: "probe_fill_in_blank", description: PROBE },
 } as const;
 
-/** Spans of $…$ and $$…$$ maths, so gaps inside them can be refused. */
-function mathSpans(text: string): [number, number][] {
+/** Spans the host renders as maths or code ($$…$$, \[…\], \(…\), `code`, $…$ even with spaces),
+ *  so gaps inside them can be refused. */
+function protectedSpans(text: string): [number, number][] {
 	const spans: [number, number][] = [];
-	const pattern = /\$\$[\s\S]+?\$\$|(?<!\\)\$(?!\s)[^$\n]+?(?<!\s|\\)\$/g;
+	const pattern = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|(`+)[\s\S]*?\1|(?<!\\)\$[^$\n]+?(?<!\\)\$/g;
 	for (let match = pattern.exec(text); match; match = pattern.exec(text)) spans.push([match.index, match.index + match[0].length]);
 	return spans;
 }
@@ -72,12 +73,12 @@ export function validateBlankQuestion(payload: BlankPayload): string[] | undefin
 	const errors: string[] = [];
 	const count = payload.blanks.length;
 	const seen = new Map<number, number>();
-	const maths = mathSpans(payload.text);
+	const protectedText = protectedSpans(payload.text);
 	for (const match of payload.text.matchAll(MARKER)) {
 		const k = Number(match[1]);
 		seen.set(k, (seen.get(k) ?? 0) + 1);
-		if (maths.some(([start, end]) => match.index! >= start && match.index! < end)) {
-			errors.push(`Gap [[${k}]] is inside maths — keep gaps outside $…$ (put the gap next to the formula).`);
+		if (protectedText.some(([start, end]) => match.index! >= start && match.index! < end)) {
+			errors.push(`Gap [[${k}]] is inside maths or code — keep gaps outside $…$, \\(…\\) and \`code\` (put the gap next to the formula; escape a literal dollar as \\$).`);
 		}
 	}
 	for (let k = 1; k <= count; k++) {
@@ -132,6 +133,19 @@ export function gradeBlank(payload: BlankPayload, answer: BlankAnswer): BlankGra
 	});
 	return { correct: blanks.every(b => b.correct), blanks };
 }
+
+/** A code span holding `text` literally: the fence is longer than any backtick run inside, padded
+ *  when the text starts or ends with a backtick. Code spans stay intact next to letters and digits. */
+function codeSpan(text: string): string {
+	const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map(run => run.length));
+	const fence = "`".repeat(longest + 1);
+	const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
+	return `${fence}${pad}${text}${pad}${fence}`;
+}
+/** How a gap shows on the question card. */
+export const gapLabel = (k: number): string => codeSpan(`[ ${k} ]`);
+/** How a learner's answer shows in the answered card ("—" for an empty gap). */
+export const filledLabel = (given: string): string => codeSpan(given.trim() || "—");
 
 /** The statement with each [[k]] replaced by `label(k)` (the cards' gap labels or filled answers). */
 export function stemMarkdown(text: string, label: (k: number) => string): string {

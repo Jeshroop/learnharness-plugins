@@ -1,8 +1,8 @@
 // Fill in the blank: the question card, the answer box and the answered card.
 import type { PluginFrontendContext, PluginQuestionEditorHandle, PluginQuestionRenderer } from "learnharness-plugin-api";
-import { BLANK_TYPE_ID, stemMarkdown, type BlankAnswer, type BlankGrade, type BlankPayload } from "./blank.ts";
+import { BLANK_TYPE_ID, filledLabel, gapLabel, stemMarkdown, type BlankAnswer, type BlankGrade, type BlankPayload } from "./blank.ts";
 import { mountPrompt, mountWhy } from "./card.ts";
-import { bag, el, escapeMarkdown } from "./dom.ts";
+import { bag, el } from "./dom.ts";
 import { formatLabel, readReformat } from "./formats.ts";
 import { mountReformat } from "./reformat-view.ts";
 
@@ -20,7 +20,7 @@ export function blankRenderer(ui: Ui): PluginQuestionRenderer<BlankPayload, Blan
 			mountPrompt(root, ui, context.input.question, context.signal, cleanup);
 			const stem = el("div", "fmt-stem");
 			root.append(stem);
-			cleanup.add(ui.mountMarkdown(stem, { text: stemMarkdown(context.input.payload.text, k => `**[ ${k} ]**`) }, { signal: context.signal }));
+			cleanup.add(ui.mountMarkdown(stem, { text: stemMarkdown(context.input.payload.text, gapLabel) }, { signal: context.signal }));
 			mountWhy(root, context.input.payload.why);
 			return () => cleanup.dispose();
 		},
@@ -103,7 +103,7 @@ export function blankRenderer(ui: Ui): PluginQuestionRenderer<BlankPayload, Blan
 			cleanup.add(ui.mountMarkdown(stem, {
 				text: stemMarkdown(props.input.payload.text, k => {
 					const mark = marks?.[k - 1] ? (marks[k - 1]!.correct ? " ✓" : " ✗") : "";
-					return `**${escapeMarkdown(given[k - 1]?.trim() || "—")}**${mark}`;
+					return `${filledLabel(given[k - 1] ?? "")}${mark}`;
 				}),
 			}, { signal: props.signal }));
 			const misses = marks ? props.input.payload.blanks.map((gap, i) => ({ gap, i })).filter(({ i }) => marks[i] && !marks[i]!.correct) : [];

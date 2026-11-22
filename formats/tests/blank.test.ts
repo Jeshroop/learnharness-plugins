@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gradeBlank, matches, stemMarkdown, validateBlankAnswer, validateBlankQuestion, type BlankPayload } from "../src/blank.ts";
+import { filledLabel, gapLabel, gradeBlank, matches, stemMarkdown, validateBlankAnswer, validateBlankQuestion, type BlankPayload } from "../src/blank.ts";
 
 const payload = (text: string, count = 2): BlankPayload => ({
 	text, why: "Recall the exact law.",
@@ -60,6 +60,20 @@ test("a request to ask it another way is graded as just that — never right or 
 test("an answer must fill every gap the question has", () => {
 	assert.match(validateBlankAnswer(payload("[[1]] [[2]]"), { blanks: ["only one"] })!.join(" "), /2/);
 	assert.equal(validateBlankAnswer(payload("[[1]] [[2]]"), { blanks: ["a", "b"] }), undefined);
+});
+
+test("gaps inside \\(…\\), \\[…\\], code or spaced $…$ maths are refused too", () => {
+	for (const text of ["Then \\(v = [[1]]t\\) and [[2]].", "\\[s = [[1]]\\] then [[2]].", "Run `x = [[1]]` and [[2]].", "It costs $5 or [[1]] for $10 and [[2]]."]) {
+		assert.match(validateBlankQuestion(payload(text))!.join(" "), /outside/i, text);
+	}
+});
+
+test("gap labels and filled answers are code spans, safe next to letters and backticks", () => {
+	assert.equal(gapLabel(1), "`[ 1 ]`");
+	assert.equal(filledLabel("mass"), "`mass`");
+	assert.equal(filledLabel("a`b"), "``a`b``");
+	assert.equal(filledLabel("`x"), "`` `x ``");
+	assert.equal(filledLabel("   "), "`—`");
 });
 
 test("the stem shows each gap with its label and leaves the rest alone", () => {
