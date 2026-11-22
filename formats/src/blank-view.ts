@@ -57,6 +57,14 @@ export function blankRenderer(ui: Ui): PluginQuestionRenderer<BlankPayload, Blan
 				setDisabled: off => { for (const input of inputs) input.disabled = off; },
 			});
 			for (const input of inputs) input.addEventListener("input", publish);
+			const applyActive = () => { for (const input of inputs) input.readOnly = !active; reformat.setActive(active); };
+			const applyAnswer = (answer: typeof props.answer) => {
+				const requested = answer.status !== "empty" ? readReformat(answer.value) : undefined;
+				if (requested) reformat.show(requested);
+				else if (reformat.showing) reformat.reset();
+			};
+			applyActive();
+			applyAnswer(props.answer);
 			const dispose = () => {
 				if (disposed) return;
 				disposed = true;
@@ -70,11 +78,17 @@ export function blankRenderer(ui: Ui): PluginQuestionRenderer<BlankPayload, Blan
 				update(next) {
 					if (disposed) return;
 					active = next.active;
+					applyActive();
+					applyAnswer(next.answer);
 					const value = next.answer.status !== "empty" ? next.answer.value as { blanks?: unknown } | null : null;
 					if (value && Array.isArray(value.blanks)) value.blanks.forEach((text, i) => { if (inputs[i] && inputs[i].value !== text && typeof text === "string") inputs[i].value = text; });
 					else if (next.answer.status === "empty") for (const input of inputs) input.value = "";
 				},
-				focus() { if (!disposed && active) (inputs.find(input => input.value.trim() === "") ?? inputs[0])?.focus(); },
+				focus() {
+					if (disposed || !active) return;
+					if (reformat.showing) reformat.focusUndo();
+					else (inputs.find(input => input.value.trim() === "") ?? inputs[0])?.focus();
+				},
 				handleKeyDown(key) {
 					if (disposed || !active || key !== "Tab") return "pass";
 					const index = inputs.findIndex(input => input === document.activeElement);

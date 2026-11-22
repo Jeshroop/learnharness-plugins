@@ -98,12 +98,22 @@ export function graphRenderer(ui: Ui): PluginQuestionRenderer<GraphPayload, Grap
 				next.focus();
 			};
 			group.addEventListener("keydown", onKey);
+			let reformatShown = false;
+			const applyCards = () => { for (const card of cards) card.disabled = reformatShown || !active; };
 			const reformat = mountReformat(root, "graph", {
 				pick: id => { if (!disposed && active) props.onChange({ status: "ready", value: { reformat: id } }); },
 				undo: publish,
-				setDisabled: off => { for (const card of cards) card.disabled = off; },
+				setDisabled: off => { reformatShown = off; applyCards(); },
 			});
 			render();
+			const applyAnswer = (answer: typeof props.answer) => {
+				const requested = answer.status !== "empty" ? readReformat(answer.value) : undefined;
+				if (requested) reformat.show(requested);
+				else if (reformat.showing) reformat.reset();
+			};
+			reformat.setActive(active);
+			applyCards();
+			applyAnswer(props.answer);
 			const dispose = () => {
 				if (disposed) return;
 				disposed = true;
@@ -116,10 +126,17 @@ export function graphRenderer(ui: Ui): PluginQuestionRenderer<GraphPayload, Grap
 				update(next) {
 					if (disposed) return;
 					active = next.active;
+					reformat.setActive(active);
+					applyCards();
+					applyAnswer(next.answer);
 					choice = next.answer.status !== "empty" ? readChoice(next.answer.value) ?? choice : null;
 					render();
 				},
-				focus() { if (!disposed && active) (cards.find(card => card.dataset.letter === choice) ?? cards[0])?.focus(); },
+				focus() {
+					if (disposed || !active) return;
+					if (reformat.showing) reformat.focusUndo();
+					else (cards.find(card => card.dataset.letter === choice) ?? cards[0])?.focus();
+				},
 				handleKeyDown: () => "pass",
 				dispose,
 			};
