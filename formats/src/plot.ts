@@ -1,0 +1,76 @@
+// Turning y = f(x) into SVG paths: sampling that breaks at gaps and asymptotes,
+// a robust y range, and evenly spaced axis ticks. Pure functions.
+
+export type Point = [number, number];
+export type Path = Point[];
+export interface View { x: [number, number]; y: [number, number]; width: number; height: number }
+
+export const SAMPLES = 240;
+
+function quantileRange(values: number[], q = 0.05): [number, number] {
+	const sorted = [...values].sort((a, b) => a - b);
+	const at = (p: number) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))))]!;
+	return [at(q), at(1 - q)];
+}
+
+/** Sample the curve, starting a new path where it is undefined or jumps across the view (an asymptote). */
+export function samplePaths(fn: (x: number) => number, [x0, x1]: [number, number], samples = SAMPLES): Path[] {
+	const raw: (Point | null)[] = [];
+	for (let i = 0; i <= samples; i++) {
+		const x = x0 + ((x1 - x0) * i) / samples;
+		let y: number;
+		try { y = fn(x); } catch { y = Number.NaN; }
+		raw.push(Number.isFinite(y) ? [x, y] : null);
+	}
+	const finite = raw.filter((p): p is Point => p !== null);
+	if (!finite.length) return [];
+	const [lo, hi] = quantileRange(finite.map(p => p[1]));
+	const jump = Math.max(hi - lo, 1e-6) * 2;
+	const paths: Path[] = [];
+	let current: Path = [];
+	for (const point of raw) {
+		const previous = current[current.length - 1];
+		if (!point || (previous && Math.abs(point[1] - previous[1]) > jump)) {
+			if (current.length) paths.push(current);
+			current = point ? [point] : [];
+			continue;
+		}
+		current.push(point);
+	}
+	if (current.length) paths.push(current);
+	return paths;
+}
+
+/** A y range that ignores the extreme values near asymptotes, padded a little. */
+export function fitY(paths: Path[], fallback: [number, number] = [-5, 5]): [number, number] {
+	const ys = paths.flat().map(p => p[1]);
+	if (!ys.length) return fallback;
+	let [lo, hi] = quantileRange(ys);
+	if (hi - lo < 1e-6) { lo -= 1; hi += 1; }
+	const pad = (hi - lo) * 0.15;
+	return [lo - pad, hi + pad];
+}
+
+const px = (value: number) => (Number.isFinite(value) ? value.toFixed(1) : "0");
+
+/** SVG path data in view coordinates; far-off values are clamped so the numbers stay sane. */
+export function toSvgPath(paths: Path[], view: View): string {
+	const [x0, x1] = view.x, [y0, y1] = view.y;
+	const sx = (x: number) => ((x - x0) / (x1 - x0)) * view.width;
+	const sy = (y: number) => Math.min(view.height * 3, Math.max(-view.height * 2, view.height - ((y - y0) / (y1 - y0)) * view.height));
+	return paths.filter(path => path.length > 1)
+		.map(path => path.map(([x, y], i) => `${i ? "L" : "M"}${px(sx(x))} ${px(sy(y))}`).join(" "))
+		.join(" ");
+}
+
+/** Evenly spaced "nice" ticks (1, 2 or 5 × 10^k) inside the range. */
+export function axisTicks([a, b]: [number, number]): number[] {
+	const span = b - a;
+	if (!(span > 0)) return [];
+	const raw = span / 8;
+	const magnitude = 10 ** Math.floor(Math.log10(raw));
+	const step = [1, 2, 5, 10].find(m => m * magnitude >= raw)! * magnitude;
+	const ticks: number[] = [];
+	for (let t = Math.ceil(a / step) * step; t <= b + step * 1e-9; t += step) ticks.push(Number(t.toFixed(10)) || 0);
+	return ticks;
+}
