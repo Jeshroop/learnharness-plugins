@@ -70,11 +70,35 @@ export const MAX_TICKS = 50;
 export function axisTicks([a, b]: [number, number]): number[] {
 	const span = b - a;
 	if (!(span > 0) || !Number.isFinite(span)) return [];
-	const raw = span / 8;
+	const raw = span / 10;
 	const magnitude = 10 ** Math.floor(Math.log10(raw));
 	const step = [1, 2, 5, 10].find(m => m * magnitude >= raw)! * magnitude;
 	const first = Math.ceil(a / step) * step;
 	if (!Number.isFinite(first) || !(step > 0) || first + step === first) return [];
 	const count = Math.min(Math.floor((b - first) / step + 1e-9) + 1, MAX_TICKS);
 	return Array.from({ length: Math.max(0, count) }, (_, k) => Number((first + k * step).toFixed(10)) || 0);
+}
+
+export interface TickLabel { axis: "x" | "y"; x: number; y: number; text: string }
+
+/** Number labels for the grid, placed along the axes (or the edges when an axis is out of view),
+ *  skipping 0 and ticks too close to an edge to read. */
+export function tickLabels(view: View): TickLabel[] {
+	const { width: W, height: H } = view;
+	const sx = (x: number) => ((x - view.x[0]) / (view.x[1] - view.x[0])) * W;
+	const sy = (y: number) => H - ((y - view.y[0]) / (view.y[1] - view.y[0])) * H;
+	const text = (t: number) => String(Number(t.toFixed(6)));
+	const clamp = (value: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, value));
+	const labels: TickLabel[] = [];
+	const xAt = clamp(sy(0) + 10, 9, H - 2);
+	for (const t of axisTicks(view.x)) {
+		const x = sx(t);
+		if (t !== 0 && x > 6 && x < W - 6) labels.push({ axis: "x", x, y: xAt, text: text(t) });
+	}
+	const yAt = clamp(sx(0) + 3, 2, W - 14);
+	for (const t of axisTicks(view.y)) {
+		const y = sy(t) + 3;
+		if (t !== 0 && y > 9 && y < H - 3) labels.push({ axis: "y", x: yAt, y, text: text(t) });
+	}
+	return labels;
 }

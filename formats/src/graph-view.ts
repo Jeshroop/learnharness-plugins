@@ -4,7 +4,7 @@ import { mountPrompt, mountWhy } from "./card.ts";
 import { bag, el } from "./dom.ts";
 import { formatLabel, readReformat } from "./formats.ts";
 import { GRAPH_TYPE_ID, LETTERS, graphViewport, optionPaths, type GraphAnswer, type GraphGrade, type GraphPayload } from "./graph.ts";
-import { axisTicks, toSvgPath, type Path } from "./plot.ts";
+import { axisTicks, tickLabels, toSvgPath, type Path } from "./plot.ts";
 import { mountReformat } from "./reformat-view.ts";
 
 type Ui = PluginFrontendContext["ui"];
@@ -29,6 +29,11 @@ export function plotSvg(paths: Path[], view: View, label: string): SVGSVGElement
 	if (view.x[0] <= 0 && view.x[1] >= 0) root.append(svg("line", { x1: sx(0), x2: sx(0), y1: 0, y2: H, class: "fmt-axis" }));
 	const d = toSvgPath(paths, { ...view, width: W, height: H });
 	if (d) root.append(svg("path", { d, class: "fmt-curve" }));
+	for (const label of tickLabels({ ...view, width: W, height: H })) {
+		const node = svg("text", { x: label.x, y: label.y, class: "fmt-tick", "text-anchor": label.axis === "x" ? "middle" : "start" });
+		node.textContent = label.text;
+		root.append(node);
+	}
 	return root;
 }
 

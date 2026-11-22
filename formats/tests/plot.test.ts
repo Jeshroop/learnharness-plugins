@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { compile } from "../src/expr.ts";
-import { axisTicks, fitY, samplePaths, toSvgPath } from "../src/plot.ts";
+import { axisTicks, fitY, samplePaths, tickLabels, toSvgPath } from "../src/plot.ts";
 
 const fn = (source: string) => {
 	const compiled = compile(source);
@@ -46,6 +46,16 @@ test("axis ticks stay bounded far from zero, where the step is below the numbers
 		const ticks = axisTicks(range);
 		assert.ok(Array.isArray(ticks) && ticks.length <= 50, `${range}: ${ticks.length}`);
 	}
+});
+
+test("the default view has a 1-unit grid, and tick labels give the scale inside the plot", () => {
+	assert.deepEqual(axisTicks([-5, 5]), [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]);
+	const view = { x: [-5, 5] as [number, number], y: [-2, 6] as [number, number], width: 220, height: 160 };
+	const labels = tickLabels(view);
+	const xs = labels.filter(l => l.axis === "x").map(l => l.text);
+	assert.ok(xs.includes("1") && xs.includes("-1") && xs.includes("4") && !xs.includes("0"), `${xs}`);
+	assert.ok(labels.some(l => l.axis === "y"), "y labels too");
+	for (const label of labels) assert.ok(label.x >= 0 && label.x <= 220 && label.y >= 0 && label.y <= 160, JSON.stringify(label));
 });
 
 test("axis ticks are evenly spaced and include zero", () => {

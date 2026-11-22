@@ -28,6 +28,7 @@
 .fmt-plot { width: 100%; height: auto; display: block; color: var(--foreground); }
 .fmt-grid { stroke: var(--border); stroke-width: .6; }
 .fmt-axis { stroke: var(--muted-foreground); stroke-width: 1; }
+.fmt-tick { font-size: 9px; fill: var(--muted-foreground); font-family: inherit; }
 .fmt-curve { fill: none; stroke: var(--primary); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
 
 .fmt-reformat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; font-size: 12px; color: var(--muted-foreground); }
