@@ -92,7 +92,7 @@ export function blankRenderer(ui: Ui): PluginQuestionRenderer<BlankPayload, Blan
 			mountPrompt(root, ui, props.input.question, props.signal, cleanup);
 			const requested = readReformat(props.answer);
 			if (requested) {
-				root.append(el("p", "fmt-reformatted", `Asked to have this asked as ${formatLabel(requested).toLowerCase()} instead.`));
+				root.append(el("p", "fmt-reformatted", `Asked for this as “${formatLabel(requested)}” instead.`));
 				return () => cleanup.dispose();
 			}
 			const given = "blanks" in props.answer ? props.answer.blanks : [];

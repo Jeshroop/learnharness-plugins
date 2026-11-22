@@ -31,7 +31,7 @@ export function mountReformat(root: HTMLElement, current: FormatId, hooks: Refor
 	root.append(bar, note);
 
 	function choose(id: FormatId) {
-		text.textContent = `Press Submit to have this asked as ${formatLabel(id).toLowerCase()} instead. `;
+		text.textContent = `Press Submit to get this as “${formatLabel(id)}” instead. `;
 		note.hidden = false;
 		bar.hidden = true;
 		hooks.setDisabled(true);

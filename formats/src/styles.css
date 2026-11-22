@@ -35,6 +35,7 @@
 	background: transparent; color: var(--foreground); font: inherit; font-size: 12px; cursor: pointer; }
 .fmt-reformat-choice:hover, .fmt-reformat-undo:hover { border-color: var(--primary); }
 .fmt-reformat-note { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.fmt-reformat[hidden], .fmt-reformat-note[hidden] { display: none; }
 .fmt-reformatted { margin: 0; font-style: italic; color: var(--muted-foreground); }
 .fmt-misses-label { margin: 0; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 .fmt-misses { margin: 0; padding-left: 18px; font-size: 13px; }

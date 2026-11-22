@@ -127,7 +127,7 @@ export function graphRenderer(ui: Ui): PluginQuestionRenderer<GraphPayload, Grap
 			mountPrompt(root, ui, props.input.question, props.signal, cleanup);
 			const requested = readReformat(props.answer);
 			if (requested) {
-				root.append(el("p", "fmt-reformatted", `Asked to have this asked as ${formatLabel(requested).toLowerCase()} instead.`));
+				root.append(el("p", "fmt-reformatted", `Asked for this as “${formatLabel(requested)}” instead.`));
 				return () => cleanup.dispose();
 			}
 			const payload = props.input.payload;
