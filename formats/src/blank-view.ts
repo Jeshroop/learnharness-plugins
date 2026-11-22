@@ -1,24 +1,12 @@
 // Fill in the blank: the question card, the answer box and the answered card.
 import type { PluginFrontendContext, PluginQuestionEditorHandle, PluginQuestionRenderer } from "learnharness-plugin-api";
 import { BLANK_TYPE_ID, stemMarkdown, type BlankAnswer, type BlankGrade, type BlankPayload } from "./blank.ts";
+import { mountPrompt, mountWhy } from "./card.ts";
 import { bag, el, escapeMarkdown } from "./dom.ts";
 import { formatLabel, readReformat } from "./formats.ts";
 import { mountReformat } from "./reformat-view.ts";
 
 type Ui = PluginFrontendContext["ui"];
-
-export function mountPrompt(root: HTMLElement, ui: Ui, question: string, signal: AbortSignal, cleanup: ReturnType<typeof bag>): void {
-	if (!question.trim()) return;
-	const target = el("div", "fmt-prompt");
-	root.append(target);
-	cleanup.add(ui.mountMarkdown(target, { text: question }, { signal }));
-}
-
-export function mountWhy(root: HTMLElement, why: string): void {
-	const line = el("p", "fmt-why");
-	line.append(el("span", "fmt-why-label", "Why this format: "), document.createTextNode(why));
-	root.append(line);
-}
 
 export function blankRenderer(ui: Ui): PluginQuestionRenderer<BlankPayload, BlankAnswer> {
 	return {
