@@ -1,0 +1,130 @@
+// Fill in the blank: the contract the tutor writes to, its validation and its grading.
+import { readReformat, reformatAnswerSchema } from "./formats.ts";
+
+export const BLANK_TYPE_ID = "blank";
+export interface BlankGap { accept: string[]; tolerance?: number; hint?: string }
+export interface BlankPayload { text: string; blanks: BlankGap[]; why: string }
+export type BlankAnswer = { blanks: string[] } | { reformat: string };
+export type BlankGrade = { correct: boolean; blanks: { given: string; correct: boolean }[] } | { reformat: string };
+
+const MARKER = /\[\[(\d+)\]\]/g;
+const MAX_GAPS = 8;
+
+const TEACH = [
+	"Ask a fill-in-the-blank question: a statement with numbered gaps the learner types into.",
+	"Best for recalling exact terms, values, formulas, units or steps.",
+	"`question` is a short instruction shown above it (e.g. \"Fill in the gaps.\").",
+	"payload.text is Markdown with each gap written as [[1]], [[2]], … in order — keep gaps outside $…$ maths.",
+	"payload.blanks gives, for each gap in order, the accepted answers (numbers match by value; add tolerance for rounded values) and an optional short hint shown in the gap.",
+	"payload.why is one line saying why this format suits this question; it is shown on the card.",
+	"Accepted answers stay hidden until the learner answers.",
+].join(" ");
+const PROBE = [
+	"Probe what the learner already knows with a fill-in-the-blank question (numbered gaps they type into).",
+	"payload.text is Markdown with gaps [[1]], [[2]], … outside $…$ maths; payload.blanks lists accepted answers per gap",
+	"(numbers match by value; optional tolerance and hint); payload.why is one line on why this format fits.",
+].join(" ");
+
+export const blankDefinition = {
+	id: BLANK_TYPE_ID,
+	label: "Fill in the blank",
+	contractVersion: 1,
+	showThinking: true,
+	questionSchema: {
+		type: "object", additionalProperties: false, required: ["text", "blanks", "why"],
+		properties: {
+			text: { type: "string", pattern: "\\S", description: "Markdown with gaps written [[1]], [[2]], … in order, outside $…$ maths." },
+			blanks: {
+				type: "array", minItems: 1, maxItems: MAX_GAPS,
+				description: "One entry per gap, in order.",
+				items: {
+					type: "object", additionalProperties: false, required: ["accept"],
+					properties: {
+						accept: { type: "array", minItems: 1, items: { type: "string", pattern: "\\S" }, description: "Accepted answers; numbers match by value." },
+						tolerance: { type: "number", minimum: 0, description: "Optional absolute tolerance for numeric answers." },
+						hint: { type: "string", description: "Optional short hint shown in the gap, e.g. 'a number' or 'unit'." },
+					},
+				},
+			},
+			why: { type: "string", pattern: "\\S", description: "One line: why this format suits the question (shown on the card)." },
+		},
+	},
+	answerSchema: {
+		anyOf: [
+			{ type: "object", additionalProperties: false, required: ["blanks"], properties: { blanks: { type: "array", items: { type: "string" } } } },
+			reformatAnswerSchema("blank"),
+		],
+	},
+	teach: { toolName: "fill_in_blank", description: TEACH },
+	probe: { toolName: "probe_fill_in_blank", description: PROBE },
+} as const;
+
+/** Spans of $…$ and $$…$$ maths, so gaps inside them can be refused. */
+function mathSpans(text: string): [number, number][] {
+	const spans: [number, number][] = [];
+	const pattern = /\$\$[\s\S]+?\$\$|(?<!\\)\$(?!\s)[^$\n]+?(?<!\s|\\)\$/g;
+	for (let match = pattern.exec(text); match; match = pattern.exec(text)) spans.push([match.index, match.index + match[0].length]);
+	return spans;
+}
+
+export function validateBlankQuestion(payload: BlankPayload): string[] | undefined {
+	const errors: string[] = [];
+	const count = payload.blanks.length;
+	const seen = new Map<number, number>();
+	const maths = mathSpans(payload.text);
+	for (const match of payload.text.matchAll(MARKER)) {
+		const k = Number(match[1]);
+		seen.set(k, (seen.get(k) ?? 0) + 1);
+		if (maths.some(([start, end]) => match.index! >= start && match.index! < end)) {
+			errors.push(`Gap [[${k}]] is inside maths — keep gaps outside $…$ (put the gap next to the formula).`);
+		}
+	}
+	for (let k = 1; k <= count; k++) {
+		const times = seen.get(k) ?? 0;
+		if (times === 0) errors.push(`payload.text has no [[${k}]] for gap ${k} of ${count}.`);
+		else if (times > 1) errors.push(`Gap [[${k}]] appears ${times} times; use each gap once.`);
+	}
+	for (const k of seen.keys()) if (k < 1 || k > count) errors.push(`payload.text has [[${k}]] but payload.blanks has ${count} entr${count === 1 ? "y" : "ies"}.`);
+	return errors.length ? errors : undefined;
+}
+
+export function validateBlankAnswer(payload: BlankPayload, answer: BlankAnswer): string[] | undefined {
+	if ("reformat" in answer) return undefined;
+	return answer.blanks.length === payload.blanks.length ? undefined : [`Expected ${payload.blanks.length} answers, one per gap; got ${answer.blanks.length}.`];
+}
+
+const normalizeText = (value: string) => value.normalize("NFKC").replace(/[−–—]/g, "-").replace(/\s+/g, " ").trim().replace(/[.。]+$/, "").toLowerCase();
+
+function parseNumber(value: string): number {
+	const compact = normalizeText(value).replace(/\s+/g, "");
+	const fraction = /^([+-]?\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/.exec(compact);
+	if (fraction) return Number(fraction[1]) / Number(fraction[2]);
+	return /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/.test(compact) ? Number(compact) : Number.NaN;
+}
+
+/** Numbers match by value (within tolerance, else a tight relative margin); words ignore case, spacing and a trailing full stop. */
+export function matches(given: string, accept: readonly string[], tolerance?: number): boolean {
+	if (given.trim() === "") return false;
+	const number = parseNumber(given);
+	return accept.some(candidate => {
+		const target = parseNumber(candidate);
+		if (Number.isFinite(number) && Number.isFinite(target)) return Math.abs(number - target) <= (tolerance ?? 1e-9 * Math.max(1, Math.abs(target)));
+		return normalizeText(given) === normalizeText(candidate);
+	});
+}
+
+export function gradeBlank(payload: BlankPayload, answer: BlankAnswer): BlankGrade {
+	const reformat = readReformat(answer);
+	if (reformat) return { reformat };
+	const given = "blanks" in answer ? answer.blanks : [];
+	const blanks = payload.blanks.map((gap, i) => {
+		const value = given[i] ?? "";
+		return { given: value, correct: matches(value, gap.accept, gap.tolerance) };
+	});
+	return { correct: blanks.every(b => b.correct), blanks };
+}
+
+/** The statement with each [[k]] replaced by `label(k)` (the cards' gap labels or filled answers). */
+export function stemMarkdown(text: string, label: (k: number) => string): string {
+	return text.replace(MARKER, (_whole, k: string) => label(Number(k)));
+}
