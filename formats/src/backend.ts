@@ -9,6 +9,7 @@ import { gradeGraph, graphDefinition, validateGraphAnswer, validateGraphQuestion
 import { createChoiceStore, validChatId, type RecordLike } from "./choices.ts";
 import { formatTools } from "./format-tool.ts";
 import { isFormatId } from "./formats.ts";
+import { PROBER_INSTRUCTIONS, TEACHER_INSTRUCTIONS } from "./instructions.ts";
 
 type Definition = PluginQuestionTypeDefinition;
 type Validate = PluginQuestionValidationContext;
@@ -29,6 +30,9 @@ export function activate(ctx: PluginBackendContext): () => void {
 		validateAnswer: ({ input, answer }: ValidateAnswer) => validateGraphAnswer(input.payload as unknown as GraphPayload, answer as unknown as GraphAnswer),
 		gradeAnswer: ({ input, answer }: Grade) => gradeGraph(input.payload as unknown as GraphPayload, answer as unknown as GraphAnswer) as unknown as JsonValue,
 	} as unknown as Definition));
+
+	off.push(ctx.registerInstructions({ agents: ["teacher"], text: TEACHER_INSTRUCTIONS }));
+	off.push(ctx.registerInstructions({ agents: ["prober"], text: PROBER_INSTRUCTIONS }));
 
 	// The learner's format choice per chat, carried to the tutor by a per-turn tool.
 	const store = createChoiceStore(ctx.dataDirectory);
