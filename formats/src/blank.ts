@@ -89,7 +89,7 @@ export function validateBlankQuestion(payload: BlankPayload): string[] | undefin
 }
 
 export function validateBlankAnswer(payload: BlankPayload, answer: BlankAnswer): string[] | undefined {
-	if ("reformat" in answer) return undefined;
+	if ("reformat" in answer) return answer.reformat === BLANK_TYPE_ID ? ["This is already a fill-in-the-blank question."] : undefined;
 	return answer.blanks.length === payload.blanks.length ? undefined : [`Expected ${payload.blanks.length} answers, one per gap; got ${answer.blanks.length}.`];
 }
 

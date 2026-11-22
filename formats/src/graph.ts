@@ -91,7 +91,7 @@ export function validateGraphQuestion(payload: GraphPayload): string[] | undefin
 }
 
 export function validateGraphAnswer(payload: GraphPayload, answer: GraphAnswer): string[] | undefined {
-	if ("reformat" in answer) return undefined;
+	if ("reformat" in answer) return answer.reformat === GRAPH_TYPE_ID ? ["This is already a choose-the-graph question."] : undefined;
 	const index = LETTERS.indexOf(answer.choice as (typeof LETTERS)[number]);
 	return index >= 0 && index < payload.options.length ? undefined : [`${answer.choice} is not one of the ${payload.options.length} options.`];
 }
