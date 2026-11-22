@@ -1,0 +1,32 @@
+{
+  "name": "learnharness-sketch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "install:local": "npm run build && node scripts/install-plugin-local.mjs"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
+    "html-to-image": "1.11.13",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-agent-core": "1.4.0",
+    "@earendil-works/pi-ai": "1.4.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "esbuild": "0.28.2",
+    "learnharness-plugin-api": "file:../sdk",
+    "tsx": "4.23.12",
+    "typebox": "1.4.3",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,37 @@
+@import "@excalidraw/excalidraw/index.css";
+
+/* Sketch — scoped to .sketch-* */
+.sketch-host { position: relative; width: 100%; height: 100%; }
+.sketch-board { position: absolute; inset: 0; }
+
+/* Controls in Excalidraw's top-right slot; Excalidraw's own theme variables apply there. */
+.sketch-controls { display: flex; gap: 6px; align-items: center; }
+.sketch-control { height: 36px; padding: 0 12px; border: none; border-radius: 8px; background: var(--island-bg-color); color: var(--color-on-surface); box-shadow: var(--shadow-island); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.sketch-control:hover { background: var(--button-hover-bg, var(--color-surface-high)); }
+.sketch-control[aria-pressed="true"] { background: var(--color-surface-primary-container); color: var(--color-on-primary-container); }
+.sketch-control:disabled { opacity: .6; cursor: progress; }
+
+/* The Sketches view (host theme variables). */
+.sketch-gallery { padding: 24px; max-width: 64rem; margin: 0 auto; color: var(--foreground); }
+.sketch-gallery__title { margin: 0 0 16px; font-size: 18px; font-weight: 600; }
+.sketch-gallery__status { color: var(--muted-foreground); font-size: 14px; }
+.sketch-gallery__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 16px; }
+.sketch-gallery__item { display: flex; flex-direction: column; gap: 8px; }
+.sketch-gallery__thumb { aspect-ratio: 4 / 3; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: #fff; overflow: hidden; cursor: zoom-in; }
+.sketch-gallery__thumb:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.sketch-gallery__image { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sketch-gallery__when { font-size: 13px; font-weight: 500; }
+.sketch-gallery__who { font-size: 12px; color: var(--muted-foreground); }
+.sketch-gallery__reason { font-size: 13px; }
+.sketch-dialog__image { display: block; max-width: min(90vw, 1200px); max-height: 80vh; background: #fff; border-radius: 6px; }
+
+/* The question, rendered offscreen and captured as an image (after Drawing Pad, AGPL-3.0). */
+.sketch-reference { position: fixed; left: -100000px; top: 0; width: 40rem; padding: 16px 20px; box-sizing: border-box; color: var(--foreground); background: var(--background); }
+.sketch-reference-label { margin-bottom: 4px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .025em; color: var(--muted-foreground); }
+.sketch-reference-question { margin-bottom: 12px; font-weight: 500; }
+.sketch-reference-context { margin-bottom: 12px; font-size: 13px; color: var(--muted-foreground); }
+.sketch-reference-option { display: flex; align-items: flex-start; gap: 12px; border: 1px solid var(--border); border-radius: 8px; margin-top: 8px; padding: 8px 12px; font-size: 13px; }
+.sketch-reference-mark { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 2px; border: 1px solid var(--muted-foreground); border-radius: 50%; box-sizing: border-box; }
+.sketch-reference-mark[data-multiple="true"] { border-radius: 2px; }
+.sketch-reference-description { font-size: 11px; color: var(--muted-foreground); }
+.sketch-reference-extra { border-style: dashed; color: var(--muted-foreground); }

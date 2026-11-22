@@ -1,0 +1,11 @@
+{
+  "apiVersion": 1,
+  "id": "sketch",
+  "name": "Sketch",
+  "version": "0.1.0",
+  "minAppVersion": "0.6.1",
+  "description": "A lightweight Excalidraw for working problems; send a drawing with your answer or save it.",
+  "main": "main.js",
+  "backend": "backend.cjs",
+  "styles": "styles.css"
+}
