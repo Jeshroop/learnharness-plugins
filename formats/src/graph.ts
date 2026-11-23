@@ -100,7 +100,9 @@ function checkDrawn(payload: GraphPayload, repeated: ReadonlySet<number>, errors
 	const view = graphViewport(payload);
 	const span = view.y[1] - view.y[0];
 	optionPaths(payload, view.x, view.y).forEach((paths, o) => {
-		const visible = paths.some(path => path.length > 1 && path.some(([, y]) => y >= view.y[0] && y <= view.y[1]));
+		// A drawn segment is visible when it reaches into the view, even if both its ends lie outside it.
+		const visible = paths.some(path => path.some((point, i) => i > 0
+			&& Math.min(point[1], path[i - 1]![1]) <= view.y[1] && Math.max(point[1], path[i - 1]![1]) >= view.y[0]));
 		if (!visible) errors.push(`Option ${LETTERS[o]} draws nothing inside the view (x from ${view.x[0]} to ${view.x[1]}${payload.y ? `, y from ${view.y[0]} to ${view.y[1]}` : ""}).`);
 	});
 	const signature = (curve: string) => {

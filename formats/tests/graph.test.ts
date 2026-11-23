@@ -61,3 +61,8 @@ test("options that draw the same graph in different words are refused", () => {
 	assert.equal(errors(payload({ options: [{ curves: ["x"] }, { curves: ["x"] }], correct: "A" })).match(/same/g)?.length, 1, "reported once");
 	assert.equal(validateGraphQuestion(payload({ options: [{ curves: ["x^2"] }, { curves: ["x^2 + 1"] }], correct: "A" })), undefined);
 });
+
+test("a steep line crossing the view between two samples counts as drawn", () => {
+	// 100(x - 0.02) crosses y = 0 between the samples at x = 0 (y = -2) and x ≈ 0.042 (y ≈ 2.2): neither is in view.
+	assert.equal(validateGraphQuestion(payload({ options: [{ curves: ["100(x - 0.02)"] }, { curves: ["x"] }], correct: "A", y: [-1, 1] })), undefined);
+});
