@@ -1,7 +1,7 @@
 // Choose the graph: the contract the tutor writes to, its validation, grading and shared viewport.
 import { compile } from "./expr.ts";
 import { readReformat, reformatAnswerSchema } from "./formats.ts";
-import { fitY, samplePaths, type Path } from "./plot.ts";
+import { fitY, SAMPLES, samplePaths, type Path } from "./plot.ts";
 
 export const GRAPH_TYPE_ID = "graph";
 export const LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
@@ -79,16 +79,48 @@ export function validateGraphQuestion(payload: GraphPayload): string[] | undefin
 		const compiled = compile(curve);
 		if (!compiled.ok) errors.push(`Option ${LETTERS[o]}, curve ${c + 1} ("${curve}"): ${compiled.error}`);
 	}));
-	const seen = new Map<string, number>();
+	const compiled = errors.length === 0 || errors.every(e => !e.startsWith("Option "));
+	const seen = new Map<string, number>(), repeated = new Set<number>();
 	payload.options.forEach((option, o) => {
 		const key = canonical(option.curves);
 		const first = seen.get(key);
-		if (first !== undefined) errors.push(`Options ${LETTERS[first]} and ${LETTERS[o]} draw the same curves.`);
+		if (first !== undefined) { errors.push(`Options ${LETTERS[first]} and ${LETTERS[o]} draw the same curves.`); repeated.add(o); }
 		else seen.set(key, o);
 	});
+	const before = errors.length;
 	checkRange("x", payload.x, errors);
 	checkRange("y", payload.y, errors);
+	if (compiled && errors.length === before) checkDrawn(payload, repeated, errors);
 	return errors.length ? errors : undefined;
+}
+
+/** What the learner will see: every option draws something inside the shared view, and no two options
+ *  draw the same graph in different words (2x and x + x, abs(x) and sqrt(x^2)). */
+function checkDrawn(payload: GraphPayload, repeated: ReadonlySet<number>, errors: string[]): void {
+	const view = graphViewport(payload);
+	const span = view.y[1] - view.y[0];
+	optionPaths(payload, view.x, view.y).forEach((paths, o) => {
+		const visible = paths.some(path => path.length > 1 && path.some(([, y]) => y >= view.y[0] && y <= view.y[1]));
+		if (!visible) errors.push(`Option ${LETTERS[o]} draws nothing inside the view (x from ${view.x[0]} to ${view.x[1]}${payload.y ? `, y from ${view.y[0]} to ${view.y[1]}` : ""}).`);
+	});
+	const signature = (curve: string) => {
+		const result = compile(curve);
+		if (!result.ok) return curve;
+		const values: string[] = [];
+		for (let i = 0; i <= SAMPLES; i++) {
+			let y: number;
+			try { y = result.fn(view.x[0] + ((view.x[1] - view.x[0]) * i) / SAMPLES); } catch { y = Number.NaN; }
+			values.push(Number.isFinite(y) ? String(Math.round(((y - view.y[0]) / span) * 1e6)) : "-");
+		}
+		return values.join(",");
+	};
+	const seen = new Map<string, number>();
+	payload.options.forEach((option, o) => {
+		const key = option.curves.map(signature).sort().join("|");
+		const first = seen.get(key);
+		if (first === undefined) seen.set(key, o);
+		else if (!repeated.has(o)) errors.push(`Options ${LETTERS[first]} and ${LETTERS[o]} draw the same graph.`);
+	});
 }
 
 export function validateGraphAnswer(payload: GraphPayload, answer: GraphAnswer): string[] | undefined {
@@ -105,10 +137,10 @@ export function gradeGraph(payload: GraphPayload, answer: GraphAnswer): GraphGra
 }
 
 /** Each option's sampled curves (unparseable curves are skipped). */
-export function optionPaths(payload: GraphPayload, x: [number, number]): Path[][] {
+export function optionPaths(payload: GraphPayload, x: [number, number], y?: [number, number]): Path[][] {
 	return payload.options.map(option => option.curves.flatMap(curve => {
 		const compiled = compile(curve);
-		return compiled.ok ? samplePaths(compiled.fn, x) : [];
+		return compiled.ok ? samplePaths(compiled.fn, x, undefined, y) : [];
 	}));
 }
 

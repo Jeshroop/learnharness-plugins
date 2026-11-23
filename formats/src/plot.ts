@@ -13,8 +13,10 @@ function quantileRange(values: number[], q = 0.05): [number, number] {
 	return [at(q), at(1 - q)];
 }
 
-/** Sample the curve, starting a new path where it is undefined or jumps across the view (an asymptote). */
-export function samplePaths(fn: (x: number) => number, [x0, x1]: [number, number], samples = SAMPLES): Path[] {
+/** Sample the curve, starting a new path where it is undefined or jumps across the view (an asymptote).
+ *  Given the view's y range, a jump of more than a quarter of the view that is still there at 16× finer
+ *  sampling is an asymptote too, however wide the curve's own range is (tan(x) + x^4 in a narrow view). */
+export function samplePaths(fn: (x: number) => number, [x0, x1]: [number, number], samples = SAMPLES, viewY?: [number, number]): Path[] {
 	const raw: (Point | null)[] = [];
 	for (let i = 0; i <= samples; i++) {
 		const x = x0 + ((x1 - x0) * i) / samples;
@@ -26,11 +28,23 @@ export function samplePaths(fn: (x: number) => number, [x0, x1]: [number, number
 	if (!finite.length) return [];
 	const [lo, hi] = quantileRange(finite.map(p => p[1]));
 	const jump = Math.max(hi - lo, 1e-6) * 2;
+	const limit = viewY ? (viewY[1] - viewY[0]) / 4 : Number.POSITIVE_INFINITY;
+	const pole = (a: Point, b: Point): boolean => {
+		let previous = a[1];
+		for (let k = 1; k <= 16; k++) {
+			let y: number;
+			try { y = k === 16 ? b[1] : fn(a[0] + ((b[0] - a[0]) * k) / 16); } catch { y = Number.NaN; }
+			if (!Number.isFinite(y) || Math.abs(y - previous) > limit) return true;
+			previous = y;
+		}
+		return false;
+	};
 	const paths: Path[] = [];
 	let current: Path = [];
 	for (const point of raw) {
 		const previous = current[current.length - 1];
-		if (!point || (previous && Math.abs(point[1] - previous[1]) > jump)) {
+		const step = point && previous ? Math.abs(point[1] - previous[1]) : 0;
+		if (!point || step > jump || (step > limit && pole(previous!, point))) {
 			if (current.length) paths.push(current);
 			current = point ? [point] : [];
 			continue;

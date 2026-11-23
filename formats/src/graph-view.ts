@@ -58,7 +58,7 @@ export function graphRenderer(ui: Ui): PluginQuestionRenderer<GraphPayload, Grap
 		mountAnswerEditor(container, props): PluginQuestionEditorHandle {
 			const payload = props.input.payload;
 			const view = graphViewport(payload);
-			const paths = optionPaths(payload, view.x);
+			const paths = optionPaths(payload, view.x, view.y);
 			let active = props.active, disposed = false;
 			let choice: string | null = props.answer.status !== "empty" ? readChoice(props.answer.value) : null;
 			const root = el("div", "fmt-editor fmt-graph-editor");
@@ -157,7 +157,7 @@ export function graphRenderer(ui: Ui): PluginQuestionRenderer<GraphPayload, Grap
 			const picked = "choice" in props.answer ? props.answer.choice : "";
 			const answer = grade && "answer" in grade ? grade.answer : payload.correct;
 			const view = graphViewport(payload);
-			const paths = optionPaths(payload, view.x);
+			const paths = optionPaths(payload, view.x, view.y);
 			const group = el("div", "fmt-options");
 			payload.options.forEach((_, i) => {
 				const letter = LETTERS[i]!;

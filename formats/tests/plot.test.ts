@@ -65,3 +65,13 @@ test("axis ticks are evenly spaced and include zero", () => {
 	assert.ok(steps.every(s => s === steps[0]), `${ticks}`);
 	assert.ok(ticks.length >= 3 && ticks.length <= 11, `${ticks}`);
 });
+
+test("an asymptote inside the view breaks the curve even when the curve's own range is wide", () => {
+	const crossings = (paths: [number, number][][]) => paths.flatMap(path => path.slice(1)
+		.filter((point, i) => Math.floor((path[i]![0] - Math.PI / 2) / Math.PI) !== Math.floor((point[0] - Math.PI / 2) / Math.PI)));
+	assert.deepEqual(crossings(samplePaths(fn("tan(x) + x^4"), X, undefined, [-3, 3])), [], "x^4 widens the curve's own range");
+	assert.deepEqual(crossings(samplePaths(fn("tan(x)"), [-50, 50], undefined, [-15, 15])), [], "coarse samples straddle each asymptote");
+	// Steep but continuous curves and sharp corners stay whole.
+	assert.equal(samplePaths(fn("200x"), X, undefined, [-5, 5]).length, 1);
+	assert.equal(samplePaths(fn("abs(200(x - 0.0125))"), X, undefined, [-1, 5]).length, 1);
+});

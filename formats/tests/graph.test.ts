@@ -48,3 +48,16 @@ test("all options share one viewport that fits every curve", () => {
 	assert.ok(view.y[0] < 1 && view.y[1] > 30, `${view.y}`);
 	assert.deepEqual(graphViewport(payload({ x: [-2, 2], y: [-1, 1] })), { x: [-2, 2], y: [-1, 1] });
 });
+
+test("an option that draws nothing inside the view is refused", () => {
+	assert.match(errors(payload({ options: [{ curves: ["ln(x - 10)"] }, { curves: ["x"] }], correct: "B" })), /Option A draws nothing inside the view/);
+	assert.match(errors(payload({ options: [{ curves: ["x^2"] }, { curves: ["x + 100"] }], correct: "A", y: [-5, 5] })), /Option B draws nothing inside the view/);
+	assert.equal(validateGraphQuestion(payload({ options: [{ curves: ["x^2"] }, { curves: ["x + 100", "x"] }], correct: "A", y: [-5, 5] })), undefined);
+});
+
+test("options that draw the same graph in different words are refused", () => {
+	assert.match(errors(payload({ options: [{ curves: ["2x"] }, { curves: ["x + x"] }], correct: "A" })), /Options A and B draw the same graph/);
+	assert.match(errors(payload({ options: [{ curves: ["x"] }, { curves: ["abs(x)"] }, { curves: ["sqrt(x^2)"] }], correct: "A" })), /Options B and C draw the same graph/);
+	assert.equal(errors(payload({ options: [{ curves: ["x"] }, { curves: ["x"] }], correct: "A" })).match(/same/g)?.length, 1, "reported once");
+	assert.equal(validateGraphQuestion(payload({ options: [{ curves: ["x^2"] }, { curves: ["x^2 + 1"] }], correct: "A" })), undefined);
+});
