@@ -105,7 +105,14 @@ export function tickLabels(view: View): TickLabel[] {
 	const clamp = (value: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, value));
 	const labels: TickLabel[] = [];
 	const xAt = clamp(sy(0) + 10, 9, H - 2);
-	for (const t of axisTicks(view.x)) {
+	// Keep every k-th x label (aligned to 0) so that the widest label fits between neighbours: about
+	// 5.5px per character at the 9px label size. Long numbers (100000, 0.0001) would otherwise run together.
+	const xs = axisTicks(view.x);
+	const tickStep = xs.length > 1 ? xs[1]! - xs[0]! : 1;
+	const spacing = (tickStep / (view.x[1] - view.x[0])) * W;
+	const every = Math.max(1, Math.ceil((Math.max(0, ...xs.map(t => text(t).length)) * 5.5 + 4) / spacing));
+	for (const t of xs) {
+		if (Math.round(t / tickStep) % every !== 0) continue;
 		const x = sx(t);
 		if (t !== 0 && x > 6 && x < W - 6) labels.push({ axis: "x", x, y: xAt, text: text(t) });
 	}

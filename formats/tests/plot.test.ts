@@ -75,3 +75,16 @@ test("an asymptote inside the view breaks the curve even when the curve's own ra
 	assert.equal(samplePaths(fn("200x"), X, undefined, [-5, 5]).length, 1);
 	assert.equal(samplePaths(fn("abs(200(x - 0.0125))"), X, undefined, [-1, 5]).length, 1);
 });
+
+test("x-axis labels are thinned so long numbers never overlap", () => {
+	for (const x of [[0, 100000], [-1e6, 1e6], [0, 0.001]] as [number, number][]) {
+		const labels = tickLabels({ x, y: [-5, 5], width: 220, height: 160 }).filter(l => l.axis === "x").sort((a, b) => a.x - b.x);
+		assert.ok(labels.length >= 2, `${x}: some labels remain`);
+		for (let i = 1; i < labels.length; i++) {
+			const room = labels[i]!.x - labels[i - 1]!.x;
+			const need = ((labels[i]!.text.length + labels[i - 1]!.text.length) / 2) * 5.5 + 4;
+			assert.ok(room >= need, `${x}: "${labels[i - 1]!.text}" and "${labels[i]!.text}" overlap (${room.toFixed(1)}px < ${need.toFixed(1)}px)`);
+		}
+	}
+	assert.equal(tickLabels({ x: [-5, 5], y: [-5, 5], width: 220, height: 160 }).filter(l => l.axis === "x").length, 8, "the default view keeps every label");
+});
