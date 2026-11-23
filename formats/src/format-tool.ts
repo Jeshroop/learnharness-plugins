@@ -26,7 +26,7 @@ export function currentChoice(store: ChoiceStore, getSession: GetSession, chatId
 	const choice = store.get(chatId);
 	if (!choice || choice.keep || choice.since === undefined) return choice;
 	const record = recordOf(getSession, chatId);
-	if (record && record.messages.length >= choice.since && questionPosedSince(record, choice.since)) { store.clear(chatId); return undefined; }
+	if (record && record.messages.length >= choice.since && questionPosedSince(record, choice.since, choice.format)) { store.clear(chatId); return undefined; }
 	return choice;
 }
 

@@ -119,3 +119,17 @@ test("a broken record never makes the tool factory throw", () => {
 	assert.deepEqual(formatTools(store, () => { throw new Error("unreadable"); }, { chatId: "chat_a", agent: "teacher" }).length, 1);
 	assert.deepEqual(formatTools(store, () => ({ messages: "nope" } as never), { chatId: "chat_a", agent: "teacher" }).length, 1);
 });
+
+test("a one-shot written choice is used up by ask_user_question, the fallback the tutor is told to use without explain", () => {
+	const store = createChoiceStore(tempDir("formats-choice-"));
+	const record = { messages: [user] as unknown[] };
+	store.set("chat_w", "written", false);
+	formatTools(store, () => record, { chatId: "chat_w", agent: "teacher" }); // the tutor sees it: the window starts
+	record.messages.push(call("ask_user_question"));
+	assert.equal(currentChoice(store, () => record, "chat_w"), undefined, "used up");
+	store.set("chat_b", "blank", false);
+	const other = { messages: [user] as unknown[] };
+	formatTools(store, () => other, { chatId: "chat_b", agent: "teacher" });
+	other.messages.push(call("ask_user_question"));
+	assert.equal(currentChoice(store, () => other, "chat_b")?.format, "blank", "a preference question doesn't use up another format");
+});

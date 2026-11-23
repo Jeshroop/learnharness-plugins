@@ -65,7 +65,9 @@ export function createChoiceStore(dataDirectory: string): ChoiceStore {
 const NATIVE_QUESTIONS = new Set(["quiz", "explain", "probe", "recall"]);
 
 /** True when a question was posed after the first `since` messages (calls that failed don't count). Tolerates odd records. */
-export function questionPosedSince(record: RecordLike, since: number): boolean {
+/** Whether a question was posed after `since`. For a pending written-answer choice, ask_user_question counts
+ *  too: it is the fallback the tutor is told to use for one when explain isn't available. */
+export function questionPosedSince(record: RecordLike, since: number, format?: FormatId): boolean {
 	if (!Array.isArray(record?.messages)) return false;
 	const failed = new Set<string>();
 	for (const raw of record.messages) {
@@ -79,7 +81,7 @@ export function questionPosedSince(record: RecordLike, since: number): boolean {
 		if (plugin.some(q => q && typeof q === "object" && typeof (q as { questionId?: unknown }).questionId === "string")) return true;
 		if (Array.isArray(message.content) && message.content.some(block => {
 			const b = block && typeof block === "object" ? block as { type?: unknown; name?: unknown; id?: unknown } : null;
-			return b?.type === "toolCall" && typeof b.name === "string" && NATIVE_QUESTIONS.has(b.name) && !(typeof b.id === "string" && failed.has(b.id));
+			return b?.type === "toolCall" && typeof b.name === "string" && (NATIVE_QUESTIONS.has(b.name) || (format === "written" && b.name === "ask_user_question")) && !(typeof b.id === "string" && failed.has(b.id));
 		})) return true;
 	}
 	return false;
