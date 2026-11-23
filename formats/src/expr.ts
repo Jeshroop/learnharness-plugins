@@ -145,10 +145,23 @@ function parse(tokens: Token[]): Fn {
 			const constant = CONSTANTS[token.value];
 			if (constant !== undefined) return () => constant;
 			const f = FUNCTIONS[token.value]!;
+			let power: number | undefined;
+			if (isSym(peek(), "^")) {
+				// sin²(x) and sin^2(x) mean (sin x)²; sin⁻¹(x) could be asin(x) or 1/sin(x), so it is refused.
+				pos++;
+				const start = pos;
+				const exponent = unary();
+				if (tokens.slice(start, pos).some(t => t.kind === "word")) fail(`Put brackets around the function before a power with x in it: (${token.value}(x))^(…).`);
+				power = exponent(0);
+				if (!(power > 0)) fail(`a${token.value}` in FUNCTIONS
+					? `${token.value}⁻¹(x) could mean a${token.value}(x), the inverse, or 1/${token.value}(x), the reciprocal: write the one you mean.`
+					: `Write 1/${token.value}(x) for the reciprocal: a negative power after a function name isn't read.`);
+			}
 			if (!isSym(peek(), "(")) fail(`Put brackets after ${token.value}, e.g. ${token.value}(x).`);
 			pos++;
 			const argument = expression();
 			expect(")");
+			if (power !== undefined) { const k = power; return x => Math.pow(f(argument(x)), k); }
 			return x => f(argument(x));
 		}
 		if (token.value === "(") { const inner = expression(); expect(")"); return inner; }

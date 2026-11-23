@@ -112,3 +112,14 @@ test("an ambiguous division is refused instead of drawing a different curve", ()
 	close(at("x/2 + 1", 2), 2);
 	close(at("(x+1)/(x-1)", 3), 2);
 });
+
+test("sin²(x) is (sin x)², and sin⁻¹(x) is refused as ambiguous", () => {
+	close(at("sin²(x) + cos²(x)", 0.7), 1);
+	close(at("sin^2(x)", Math.PI / 2), 1);
+	close(at("3cos²(x)", 0), 3);
+	close(at("tan³(x)", Math.PI / 4), 1);
+	fails("sin⁻¹(x)", /asin\(x\)/);
+	fails("sin^-1(x)", /asin\(x\)/);
+	fails("sin^x(x)", /brackets/);
+	fails("sin²x", /brackets/);
+});
