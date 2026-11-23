@@ -16,6 +16,7 @@ const CONSTANTS: Record<string, number> = { pi: Math.PI, "π": Math.PI, e: Math.
 // Longest first, so "sinh" wins over "sin" and "exp" over "e".
 const WORDS = [...Object.keys(FUNCTIONS), "pi", "π", "x", "e"].sort((a, b) => b.length - a.length);
 export const MAX_EXPRESSION_LENGTH = 300;
+const SUPERSCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 
 type Token = { kind: "num"; value: number; at: number } | { kind: "word" | "sym"; value: string; at: number };
 class ParseError extends Error {}
@@ -28,6 +29,17 @@ function tokenize(source: string): Token[] | string {
 		if (/\s/.test(char)) { i++; continue; }
 		const number = /^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/.exec(source.slice(i));
 		if (number) { tokens.push({ kind: "num", value: Number(number[0]), at: i }); i += number[0].length; continue; }
+		const superscript = /^[⁺⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+/.exec(source.slice(i));
+		if (superscript) {
+			// x² reads as x^(2), bracketed so that x²x is (x²)·x and never x^(2x).
+			const text = superscript[0], digits = [...text.replace(/^[⁺⁻]/, "")].map(d => SUPERSCRIPT_DIGITS.indexOf(d)).join("");
+			tokens.push({ kind: "sym", value: "^", at: i }, { kind: "sym", value: "(", at: i });
+			if (text[0] === "⁻") tokens.push({ kind: "sym", value: "-", at: i });
+			tokens.push({ kind: "num", value: Number(digits), at: i }, { kind: "sym", value: ")", at: i });
+			i += text.length;
+			continue;
+		}
+		if (char === "√" || char === "∛") { tokens.push({ kind: "word", value: char, at: i }); i++; continue; }
 		const letters = /^[a-zπ]+/.exec(source.slice(i));
 		if (letters) {
 			// A run like "xsin" or "2pix" is split into known words: x, sin / pi, x.
@@ -107,6 +119,19 @@ function parse(tokens: Token[]): Fn {
 		}
 		return x => Math.pow(base(x), exponent(x));
 	}
+	function root(sign: string): Fn {
+		const take = sign === "√" ? Math.sqrt : Math.cbrt;
+		const start = pos;
+		const operand = primary();
+		const next = peek();
+		// √x^2 and √2x each have two readings; refuse rather than draw the one the tutor didn't mean.
+		if (isSym(next, "^")) fail(`Put brackets to show what is under the root: ${sign}(x^2) for the root of x², or (${sign}x)^2 for the root squared.`);
+		const bareNumber = pos === start + 1 && tokens[start]!.kind === "num";
+		if (bareNumber && next && (next.kind === "num" || (next.kind === "word" && (next.value === "x" || next.value in CONSTANTS)))) {
+			fail(`Put what is under the root in brackets: ${sign}(2x) for the root of 2x, or ${sign}(2)x for the root of 2 times x.`);
+		}
+		return x => take(operand(x));
+	}
 	function primary(): Fn {
 		const token = peek();
 		if (!token) return fail("The expression ends too early.");
@@ -114,6 +139,7 @@ function parse(tokens: Token[]): Fn {
 		if (token.kind === "num") { const value = token.value; return () => value; }
 		if (token.kind === "word") {
 			if (token.value === "x") return x => x;
+			if (token.value === "√" || token.value === "∛") return root(token.value);
 			const constant = CONSTANTS[token.value];
 			if (constant !== undefined) return () => constant;
 			const f = FUNCTIONS[token.value]!;
@@ -138,7 +164,8 @@ export function compile(source: string): Compiled {
 	if (typeof source !== "string" || source.trim() === "") return { ok: false, error: "The expression is empty." };
 	if (source.length > MAX_EXPRESSION_LENGTH) return { ok: false, error: `The expression is too long (${MAX_EXPRESSION_LENGTH} characters at most).` };
 	const normalized = source.replace(/[×·]/g, "*").replace(/÷/g, "/").replace(/[−–]/g, "-")
-		.replace(/^\s*(?:y|f\s*\(\s*x\s*\))\s*=/i, "").toLowerCase();
+		// The prefix becomes spaces, so error positions still count from the start of what was written.
+		.replace(/^\s*(?:y|f\s*\(\s*x\s*\))\s*=/i, prefix => " ".repeat(prefix.length)).toLowerCase();
 	const tokens = tokenize(normalized);
 	if (typeof tokens === "string") return { ok: false, error: tokens };
 	if (!tokens.length) return { ok: false, error: "The expression is empty." };

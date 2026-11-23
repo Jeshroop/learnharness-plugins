@@ -67,3 +67,36 @@ test("mistakes are refused with a readable reason", () => {
 	fails("|x|", /abs/i);
 	fails("x".repeat(400), /long/i);
 });
+
+test("error positions count from the start of what the tutor wrote, 'y =' included", () => {
+	fails("y = x + )", /position 9\b/);
+	fails("f(x) = 2x $ 1", /position 11\b/);
+	fails("y=foo", /position 3\b/);
+});
+
+test("root signs and superscript powers are read as maths", () => {
+	close(at("√x", 9), 3);
+	close(at("√(x+7)", 9), 4);
+	close(at("2√x", 4), 4);
+	close(at("x√x", 4), 8);
+	close(at("√sin(x)", Math.PI / 2), 1);
+	close(at("∛x", -8), -2);
+	close(at("x²", 3), 9);
+	close(at("x³ - 2x²", 2), 0);
+	close(at("x⁻¹", 4), 0.25);
+	close(at("x²x", 2), 8); // a superscript is unambiguous: (x²)·x
+	close(at("(x+1)²", 2), 9);
+	close(at("e^(x²)", 1), Math.E);
+	close(at("x^2", 3), at("x²", 3));
+});
+
+test("an ambiguous root is refused instead of drawing a different curve", () => {
+	fails("√x^2", /brackets/);
+	fails("√2x", /brackets/);
+	close(at("√(x^2)", -3), 3);
+	close(at("(√x)^2", 4), 4);
+	close(at("√(2)x", 2), 2 * Math.SQRT2);
+	fails("√", /ends too early/);
+	close(at("x¹⁰", 2), 1024);
+	close(at("x²²", 1.1), 1.1 ** 22);
+});
