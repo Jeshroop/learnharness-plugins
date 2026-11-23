@@ -1,7 +1,7 @@
 // The map view: a host tree of ideas with lit / ready / dim states, and an
 // evidence surface that shows the learner's words verbatim with a Void… per attempt.
 import type { PluginFrontendContext } from "learnharness-plugin-api";
-import { rowModels, type RowModel, type TreeData } from "./view-model.ts";
+import { rowModels, shownQuestion, type RowModel, type TreeData } from "./view-model.ts";
 
 type Content = (container: HTMLElement, signal: AbortSignal) => void | (() => void);
 interface TreeRow { key: string; content: string | Content; cells?: Record<string, string>; disclosure?: { label: string; expanded: boolean; onChange: (expanded: boolean) => void }; children?: TreeRow[] }
@@ -160,7 +160,7 @@ export function mountMapView(ctx: PluginFrontendContext, container: HTMLElement,
 			if (attempt.confidence !== undefined) meta.push(`confidence ${attempt.confidence}%`);
 			if (attempt.grader) meta.push(`by ${attempt.grader}`);
 			if (attempt.voided) meta.push("voided");
-			card.append(el("p", "lh-evidence__meta", meta.join(" · ")), el("p", "lh-evidence__question", attempt.question));
+			card.append(el("p", "lh-evidence__meta", meta.join(" · ")), el("p", "lh-evidence__question", shownQuestion(attempt.format, attempt.question)));
 			const words = (label: string, text: string) => {
 				card.append(el("p", "lh-evidence__label", label));
 				card.append(el("blockquote", "lh-evidence__words", text));

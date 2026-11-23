@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { buildMap, readyNext } from "../src/map.ts";
 import type { IdeaState } from "../src/rule.ts";
-import { rowModels, treeData, type RowModel } from "../src/view-model.ts";
+import { rowModels, shownQuestion, treeData, type RowModel } from "../src/view-model.ts";
 import { familyChains, familyNodes, familyRelations } from "./helpers/graph.ts";
 
 const model = buildMap(familyNodes, familyChains, familyRelations);
@@ -73,4 +73,12 @@ describe("rowModels", () => {
 		assert.match(power.title!, /Power of a driving force\./);
 		assert.match(power.title!, /Passed/);
 	});
+});
+
+test("a plugin question shows its prompt on the evidence page, never the payload with its answer key", () => {
+	const stored = 'Fill in the law:\nF = [[1]]a\n{"blanks":[{"accept":["m"]}],"text":"F = [[1]]a","why":"w"}';
+	assert.equal(shownQuestion("plugin", stored), "Fill in the law:\nF = [[1]]a");
+	assert.equal(shownQuestion("plugin", '{"options":[],"correct":"A"}'), "A question in another plugin's format");
+	assert.equal(shownQuestion("plugin", "Line one\n{not json"), "Line one\n{not json");
+	assert.equal(shownQuestion("quiz", 'Pick one\n{"a":1}'), 'Pick one\n{"a":1}', "native questions are shown as written");
 });

@@ -111,3 +111,14 @@ export function rowModels(data: TreeData, toggled: ReadonlySet<string>): RowMode
 	}
 	return rows;
 }
+
+/** A plugin question's stored text ends with its payload as one JSON line, so that variants differ for
+ *  the pass rule. The evidence page shows only the prompt: the payload can hold the answer key. */
+export function shownQuestion(format: string, text: string): string {
+	if (format !== "plugin") return text;
+	const cut = text.lastIndexOf("\n");
+	const tail = text.slice(cut + 1);
+	if (!/^[[{]/.test(tail)) return text;
+	try { JSON.parse(tail); } catch { return text; }
+	return text.slice(0, Math.max(cut, 0)).trim() || "A question in another plugin's format";
+}
