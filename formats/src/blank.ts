@@ -16,7 +16,7 @@ const TEACH = [
 	"`question` is a short instruction shown above it (e.g. \"Fill in the gaps.\").",
 	"payload.text is Markdown with each gap written as [[1]], [[2]], … in order — keep gaps outside $…$ maths.",
 	"payload.blanks gives, for each gap in order, the accepted answers and an optional short hint shown in the gap. List every equivalent form you'd accept (other wordings, symbols, units);",
-	"case, spacing around symbols, curly quotes, a×10^n and fractions are matched automatically, and numbers match by value (add tolerance for rounded values).",
+	"case, spacing around symbols and between a number and its unit, curly quotes, superscripts (10⁸, m/s²), a×10^n, fractions and mixed numbers (1 1/2) are matched automatically, and numbers match by value (add tolerance for rounded values).",
 	"payload.why is one line saying why this format suits this question; it is shown on the card.",
 	"Accepted answers stay hidden until the learner answers.",
 ].join(" ");
@@ -107,6 +107,8 @@ const normalizeText = (value: string) => value
 	.replace(/[‘’‛′]/g, "'").replace(/[“”‟″]/g, "\"").replace(/[−–—]/g, "-").replace(/⁄/g, "/")
 	.replace(/\s+/g, " ").trim().replace(/[.。]+$/, "")
 	.replace(/\s*([^\p{L}\p{N}\s])\s*/gu, "$1")
+	// "9.8 m" is "9.8m": a number and its unit; a space between digits stays (1 1/2, 1 000).
+	.replace(/(\p{N}) (?=\p{L})/gu, "$1")
 	.toLowerCase();
 
 function parseNumber(value: string): number {

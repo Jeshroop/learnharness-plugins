@@ -97,3 +97,11 @@ test("a mixed number is a whole plus a fraction, never digits run together", () 
 	assert.equal(matches("-2 3/4", ["-2.75"]), true);
 	assert.equal(matches("1 000", ["1000"]), true, "a spaced thousands group still reads as one number");
 });
+
+test("a space between a number and its unit doesn't matter, but spaces between words still do", () => {
+	assert.equal(matches("9.8m/s^2", ["9.8 m/s^2"]), true);
+	assert.equal(matches("5 kg", ["5kg"]), true);
+	assert.equal(matches("2 x", ["2x"]), true);
+	assert.equal(matches("kineticenergy", ["kinetic energy"]), false);
+	assert.equal(matches("1 1/2", ["1.5"]), true, "mixed numbers keep their space");
+});
