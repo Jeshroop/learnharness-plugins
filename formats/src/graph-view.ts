@@ -137,7 +137,13 @@ export function graphRenderer(ui: Ui): PluginQuestionRenderer<GraphPayload, Grap
 					if (reformat.showing) reformat.focusUndo();
 					else (cards.find(card => card.dataset.letter === choice) ?? cards[0])?.focus();
 				},
-				handleKeyDown: () => "pass",
+				handleKeyDown(key) {
+					if (disposed || !active) return "pass";
+					const focused = document.activeElement;
+					if (reformat.handleKey(key, focused)) return "handled";
+					if (key === "Tab" && cards.some(card => card === focused) && reformat.focusFirst()) return "handled";
+					return "pass";
+				},
 				dispose,
 			};
 		},

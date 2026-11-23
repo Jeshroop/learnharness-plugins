@@ -19,6 +19,11 @@ export interface ReformatControl {
 	readonly showing: boolean;
 	setActive(active: boolean): void;
 	focusUndo(): void;
+	/** Focus the first choice (Tab from the card's last field). False when there is none to focus. */
+	focusFirst(): boolean;
+	/** The host routes Tab and Enter through the editor, so the choices need them handed on: Enter presses
+	 *  the focused choice or Undo, Tab moves along the choices. Returns whether the key was used. */
+	handleKey(key: string, focused: Element | null): boolean;
 	dispose(): void;
 }
 
@@ -52,17 +57,32 @@ export function mountReformat(root: HTMLElement, current: FormatId, hooks: Refor
 	for (const choice of reformatChoices(current)) {
 		const button = el("button", "fmt-reformat-choice", choice.label);
 		button.type = "button";
-		on(button, () => { show(choice.id); hooks.pick(choice.id); });
+		// The pressed control hides, so focus moves to the one that replaces it.
+		on(button, () => { show(choice.id); hooks.pick(choice.id); undo.focus(); });
 		bar.append(button);
 		buttons.push(button);
 	}
-	on(undo, () => { reset(); hooks.undo(); });
+	on(undo, () => { reset(); hooks.undo(); buttons[0]?.focus(); });
 	root.append(bar, note);
 	return {
 		show, reset,
 		get showing() { return chosen !== null; },
 		setActive(active) { for (const button of [...buttons, undo]) button.disabled = !active; },
 		focusUndo() { undo.focus(); },
+		focusFirst() {
+			const first = buttons[0];
+			if (!first || bar.hidden || first.disabled) return false;
+			first.focus();
+			return true;
+		},
+		handleKey(key, focused) {
+			const controls: HTMLButtonElement[] = [...buttons, undo];
+			const at = controls.findIndex(control => control === focused);
+			if (at < 0 || controls[at]!.disabled) return false;
+			if (key === "Enter") { controls[at]!.click(); return true; }
+			if (key === "Tab" && at < buttons.length - 1) { buttons[at + 1]!.focus(); return true; }
+			return false;
+		},
 		dispose() {
 			for (const [node, run] of listeners.splice(0)) node.removeEventListener("click", run);
 			bar.remove();

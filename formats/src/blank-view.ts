@@ -90,9 +90,13 @@ export function blankRenderer(ui: Ui): PluginQuestionRenderer<BlankPayload, Blan
 					else (inputs.find(input => input.value.trim() === "") ?? inputs[0])?.focus();
 				},
 				handleKeyDown(key) {
-					if (disposed || !active || key !== "Tab") return "pass";
-					const index = inputs.findIndex(input => input === document.activeElement);
+					if (disposed || !active) return "pass";
+					const focused = document.activeElement;
+					if (reformat.handleKey(key, focused)) return "handled";
+					if (key !== "Tab") return "pass";
+					const index = inputs.findIndex(input => input === focused);
 					if (index >= 0 && index < inputs.length - 1) { inputs[index + 1]!.focus(); return "handled"; }
+					if (index === inputs.length - 1 && reformat.focusFirst()) return "handled";
 					return "pass";
 				},
 				dispose,
