@@ -17,7 +17,7 @@ const TEACH = [
 	"Best for the shape of a function, transformations, roots and turning points, asymptotes, or matching an equation to its sketch.",
 	"`question` says what to match (e.g. \"Which graph shows y = (x − 1)(x + 2)?\").",
 	"payload.options lists each option's curves as y = f(x) in plain maths with x as the variable: 'x^2 - 3x + 2', 'sin(2x)', '1/(x-1)', 'abs(x)', 'e^x', 'ln(x)', 'sqrt(x)', 'cbrt(x)'",
-	"(brackets after functions, and around exponents that contain x: 'e^(-2x)', not 'e^-2x').",
+	"(brackets after functions, around exponents that contain x: 'e^(-2x)', not 'e^-2x', and around what is divided: '1/(2x)', not '1/2x').",
 	"payload.correct is the letter of the matching option (A = first). Optional payload.x and payload.y set the shared view range (default x from -5 to 5, y fitted).",
 	"payload.why is one line saying why this format suits this question; it is shown on the card.",
 	"Make the wrong options plausible (a sign error, a shift, a reflection). The answer stays hidden until the learner picks.",

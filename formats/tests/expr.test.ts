@@ -28,7 +28,7 @@ test("precedence and associativity follow maths convention", () => {
 	close(at("-x^2", 3), -9);
 	close(at("2^3^2", 0), 512);
 	close(at("2^-1", 0), 0.5);
-	close(at("1/2x", 4), 2);
+	close(at("1/2*x", 4), 2); // 1/2x itself is refused as ambiguous (below)
 	close(at("6/3/2", 0), 1);
 });
 
@@ -99,4 +99,16 @@ test("an ambiguous root is refused instead of drawing a different curve", () => 
 	fails("√", /ends too early/);
 	close(at("x¹⁰", 2), 1024);
 	close(at("x²²", 1.1), 1.1 ** 22);
+});
+
+test("an ambiguous division is refused instead of drawing a different curve", () => {
+	// 1/2x is a line read left to right but a hyperbola in a textbook; refuse rather than guess.
+	for (const source of ["1/2x", "1/2(x+1)", "1/2sin(x)", "3x/2x", "e^x/2x", "1/2 x"]) fails(source, /brackets/);
+	close(at("1/(2x)", 2), 0.25);
+	close(at("(1/2)x", 2), 1);
+	close(at("x/2", 2), 1);
+	close(at("1/2*x", 2), 1);
+	close(at("1/sin(x)", Math.PI / 2), 1);
+	close(at("x/2 + 1", 2), 2);
+	close(at("(x+1)/(x-1)", 3), 2);
 });

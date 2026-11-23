@@ -89,6 +89,8 @@ function parse(tokens: Token[]): Fn {
 			if (isSym(token, "*", "/")) {
 				pos++;
 				const right = unary(), l = left;
+				// 1/2x is (1/2)·x read left to right but 1/(2x) in a textbook; refuse rather than guess.
+				if (token!.value === "/" && startsPrimary(peek())) fail("Put brackets to show what is divided: 1/(2x) for 1 over 2x, or (1/2)x for half of x.");
 				left = token!.value === "*" ? x => l(x) * right(x) : x => l(x) / right(x);
 			} else if (startsPrimary(token)) {
 				// Implicit multiplication: 2x, 3(x+1), x(x-1), (x+1)(x-1), 2pi.
