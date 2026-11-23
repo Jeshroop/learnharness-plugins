@@ -109,6 +109,8 @@ const normalizeText = (value: string) => value
 	.replace(/\s*([^\p{L}\p{N}\s])\s*/gu, "$1")
 	// "9.8 m" is "9.8m": a number and its unit; a space between digits stays (1 1/2, 1 000).
 	.replace(/(\p{N}) (?=\p{L})/gu, "$1")
+	// After a letter, m², m^2 and m2 are all the same unit; after a number, ^ stays a power of ten.
+	.replace(/(\p{L})\^(?=[+-]?\d)/gu, "$1")
 	.toLowerCase();
 
 function parseNumber(value: string): number {

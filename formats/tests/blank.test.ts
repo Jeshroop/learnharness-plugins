@@ -105,3 +105,12 @@ test("a space between a number and its unit doesn't matter, but spaces between w
 	assert.equal(matches("kineticenergy", ["kinetic energy"]), false);
 	assert.equal(matches("1 1/2", ["1.5"]), true, "mixed numbers keep their space");
 });
+
+test("a power after a letter can be typed as m², m^2 or m2, as before superscripts were read", () => {
+	assert.equal(matches("m2", ["m²"]), true);
+	assert.equal(matches("m^2", ["m²"]), true);
+	assert.equal(matches("m/s2", ["m/s²"]), true);
+	assert.equal(matches("x2", ["x^2"]), true);
+	assert.equal(matches("3×10⁸", ["3×108"]), false, "after a number it stays a power of ten");
+	assert.equal(matches("10⁻³", ["0.001"]), true);
+});
