@@ -97,16 +97,25 @@ export function validateBlankAnswer(payload: BlankPayload, answer: BlankAnswer):
 
 /** Case, spacing, curly quotes, unicode minus and a trailing full stop don't matter; spacing next to
  *  symbols doesn't either ("F = ma" is "F=ma"), but spacing between words does ("kinetic energy"). */
-const normalizeText = (value: string) => value.normalize("NFKC")
+const SUPERSCRIPTS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const normalizeText = (value: string) => value
+	// Before NFKC, which would turn 10⁸ into 108 and 1½ into 11⁄2: superscripts become ^ powers,
+	// and a digit before a fraction sign gets a space (a mixed number).
+	.replace(/[⁺⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, run => `^${[...run].map(c => (c === "⁻" ? "-" : c === "⁺" ? "+" : String(SUPERSCRIPTS.indexOf(c)))).join("")}`)
+	.replace(/(\d)([¼½¾\u2150-\u215E])/g, "$1 $2")
+	.normalize("NFKC")
 	.replace(/[‘’‛′]/g, "'").replace(/[“”‟″]/g, "\"").replace(/[−–—]/g, "-").replace(/⁄/g, "/")
 	.replace(/\s+/g, " ").trim().replace(/[.。]+$/, "")
 	.replace(/\s*([^\p{L}\p{N}\s])\s*/gu, "$1")
 	.toLowerCase();
 
 function parseNumber(value: string): number {
-	const compact = normalizeText(value).replace(/\s+/g, "");
-	const scientific = /^([+-]?(?:\d+\.?\d*|\.\d+))[×x*·]10\^([+-]?\d+)$/.exec(compact);
-	if (scientific) return Number(scientific[1]) * 10 ** Number(scientific[2]);
+	const text = normalizeText(value);
+	const mixed = /^([+-]?)(\d+) (\d+)\/(\d+)$/.exec(text);
+	if (mixed) return (mixed[1] === "-" ? -1 : 1) * (Number(mixed[2]) + Number(mixed[3]) / Number(mixed[4]));
+	const compact = text.replace(/\s+/g, "");
+	const scientific = /^(?:([+-]?(?:\d+\.?\d*|\.\d+))[×x*·])?10\^([+-]?\d+)$/.exec(compact);
+	if (scientific) return Number(scientific[1] ?? 1) * 10 ** Number(scientific[2]);
 	const fraction = /^([+-]?\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)$/.exec(compact);
 	if (fraction) return Number(fraction[1]) / Number(fraction[2]);
 	return /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/.test(compact) ? Number(compact) : Number.NaN;

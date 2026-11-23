@@ -79,3 +79,21 @@ test("gap labels and filled answers are code spans, safe next to letters and bac
 test("the stem shows each gap with its label and leaves the rest alone", () => {
 	assert.equal(stemMarkdown("F = [[1]] × [[2]].", k => `(${k})`), "F = (1) × (2).");
 });
+
+test("superscript powers match their ^ form, in numbers and in units", () => {
+	assert.equal(matches("3×10⁸", ["3×10^8"]), true);
+	assert.equal(matches("3×10⁸", ["300000000"]), true);
+	assert.equal(matches("10⁻³", ["0.001"]), true);
+	assert.equal(matches("m/s²", ["m/s^2"]), true);
+	assert.equal(matches("m/s^2", ["m/s²"]), true);
+	assert.equal(matches("3×10⁸", ["3×108"]), false, "10⁸ is not 108");
+});
+
+test("a mixed number is a whole plus a fraction, never digits run together", () => {
+	assert.equal(matches("1 1/2", ["1.5"]), true);
+	assert.equal(matches("1 1/2", ["5.5"]), false);
+	assert.equal(matches("1½", ["1.5"]), true);
+	assert.equal(matches("1½", ["5.5"]), false);
+	assert.equal(matches("-2 3/4", ["-2.75"]), true);
+	assert.equal(matches("1 000", ["1000"]), true, "a spaced thousands group still reads as one number");
+});
