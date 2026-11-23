@@ -118,7 +118,6 @@ export function shownQuestion(format: string, text: string): string {
 	if (format !== "plugin") return text;
 	const cut = text.lastIndexOf("\n");
 	const tail = text.slice(cut + 1);
-	if (!/^[[{]/.test(tail)) return text;
 	try { JSON.parse(tail); } catch { return text; }
 	return text.slice(0, Math.max(cut, 0)).trim() || "A question in another plugin's format";
 }

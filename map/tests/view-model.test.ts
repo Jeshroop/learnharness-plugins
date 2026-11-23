@@ -81,4 +81,6 @@ test("a plugin question shows its prompt on the evidence page, never the payload
 	assert.equal(shownQuestion("plugin", '{"options":[],"correct":"A"}'), "A question in another plugin's format");
 	assert.equal(shownQuestion("plugin", "Line one\n{not json"), "Line one\n{not json");
 	assert.equal(shownQuestion("quiz", 'Pick one\n{"a":1}'), 'Pick one\n{"a":1}', "native questions are shown as written");
+	assert.equal(shownQuestion("plugin", 'Name the force\n"gravity"'), "Name the force", "a string payload is a payload too");
+	assert.equal(shownQuestion("plugin", "Name the force\nnull"), "Name the force");
 });
